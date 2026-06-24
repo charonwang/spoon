@@ -25,3 +25,11 @@ Spoon manages workflow artifacts only. It does not change application code, stag
 - The path policy is optimized for Windows and Cursor Plan UI file links.
 - Snapshot files are written sequentially; rerun `spoon snapshot` after interruptions.
 - `--test-cmd` and `--dependency-cmd` are trusted local user input.
+
+## V2 (planned)
+
+V2 adds a resumable Runner (`spoon run`), host-action orchestration via the `spoon-orchestrator` Skill, Claude CLI adapters, and redacted `spoon export-github`. It does not change V1 file layout or boundaries.
+
+- [Roadmap](roadmap.md) — phases, exit codes, non-goals
+- [V2 architecture](v2-architecture.md) — components, phases, state files
+- [Implementation plan](plans/v2-orchestrator-plan.md) — task list for contributors

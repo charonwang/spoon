@@ -8,7 +8,11 @@ It uses plain files as the shared source of truth. The tool creates and updates 
 
 ## Status
 
-Spoon is early V1 software. It is intentionally local-first and conservative:
+**V1 (`v0.1.x`)** — file-based CLI; commands below are available today.
+
+**V2 (planned)** — Runner, orchestrator Skill, and GitHub export. Design docs only until a V2 release; see [Roadmap](docs/roadmap.md).
+
+Spoon is intentionally local-first and conservative:
 
 - It does not stage, commit, push, or modify business code.
 - It does not read private chat logs or editor internals.
@@ -121,6 +125,18 @@ Then update `.git/info/exclude` in that repository so it contains:
 ```
 
 No dual compatibility is planned for V1.
+
+## Roadmap
+
+| Version | Focus |
+| --- | --- |
+| V1 (current) | `init` … `archive`, `.spoon/current/` file workflow |
+| V2A | Runner, `spoon run`, `spoon action` |
+| V2B | Claude CLI adapter |
+| V2C | `spoon-orchestrator` Skill |
+| V2D | `spoon export-github` + history validation template |
+
+Details: [docs/roadmap.md](docs/roadmap.md), [docs/v2-architecture.md](docs/v2-architecture.md), [docs/plans/v2-orchestrator-plan.md](docs/plans/v2-orchestrator-plan.md).
 
 ## Development
 

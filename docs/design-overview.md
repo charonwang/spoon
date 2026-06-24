@@ -26,6 +26,10 @@ Spoon manages workflow artifacts only. It does not change application code, stag
 - Snapshot files are written sequentially; rerun `spoon snapshot` after interruptions.
 - `--test-cmd` and `--dependency-cmd` are trusted local user input.
 
+## Using V1
+
+See [v1-usage.md](v1-usage.md) for install steps, the full workflow, and command reference.
+
 ## V2 (planned)
 
 V2 adds a resumable Runner (`spoon run`), host-action orchestration via the `spoon-orchestrator` Skill, Claude CLI adapters, and redacted `spoon export-github`. It does not change V1 file layout or boundaries.

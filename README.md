@@ -45,6 +45,12 @@ $env:PYTHONPATH = "src"
 python -m spoon init
 ```
 
+## Documentation
+
+- [V1 usage guide](docs/v1-usage.md) — install, workflow, and commands for day-to-day use
+- [Design overview](docs/design-overview.md)
+- [Roadmap](docs/roadmap.md) — V2 plans
+
 ## Quick Start
 
 Run Spoon from inside the Git repository you want to manage:

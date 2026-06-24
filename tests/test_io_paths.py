@@ -32,18 +32,20 @@ class IoAndPathTests(unittest.TestCase):
 
     def test_find_repo_root_finds_git_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
+            repo = Path(tmp).resolve()
             (repo / ".git").mkdir()
             child = repo / "a" / "b"
             child.mkdir(parents=True)
             self.assertEqual(find_repo_root(child), repo)
 
     def test_project_paths(self):
-        repo = Path("D:/repo")
-        paths = project_paths(repo)
-        self.assertEqual(paths.spoon, repo / ".spoon")
-        self.assertEqual(paths.current, repo / ".spoon" / "current")
-        self.assertEqual(paths.plan, repo / ".spoon" / "current" / "plan.md")
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp).resolve()
+            paths = project_paths(repo)
+            self.assertEqual(paths.repo, repo)
+            self.assertEqual(paths.spoon, repo / ".spoon")
+            self.assertEqual(paths.current, repo / ".spoon" / "current")
+            self.assertEqual(paths.plan, repo / ".spoon" / "current" / "plan.md")
 
 
 if __name__ == "__main__":

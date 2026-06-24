@@ -1,3 +1,5 @@
+import contextlib
+import io
 import unittest
 from argparse import Namespace
 from unittest.mock import patch
@@ -39,16 +41,20 @@ class CliTests(unittest.TestCase):
         self.assertEqual(parser.argv, ["init"])
 
     def test_missing_command_returns_error(self):
-        self.assertEqual(main([]), 2)
+        with contextlib.redirect_stderr(io.StringIO()), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(main([]), 2)
 
     def test_missing_required_source_returns_error(self):
-        self.assertEqual(main(["adopt-plan"]), 2)
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(main(["adopt-plan"]), 2)
 
     def test_missing_required_archive_args_returns_error(self):
-        self.assertEqual(main(["archive"]), 2)
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(main(["archive"]), 2)
 
     def test_missing_required_archive_root_returns_error(self):
-        self.assertEqual(main(["archive", "--project", "proj", "--task", "task"]), 2)
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(main(["archive", "--project", "proj", "--task", "task"]), 2)
 
 
 if __name__ == "__main__":

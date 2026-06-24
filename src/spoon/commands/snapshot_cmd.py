@@ -1,0 +1,210 @@
+from __future__ import annotations
+
+import json
+import subprocess
+from argparse import Namespace
+from datetime import datetime
+from pathlib import Path, PurePosixPath
+
+from ..constants import SNAPSHOT_FILES
+from ..git_util import run_git
+from ..io_util import read_text, write_text
+from ..paths import find_repo_root, project_paths
+
+
+MAX_UNTRACKED_DIFF_BYTES = 200_000
+DEFAULT_SENSITIVE_SCAN = "# Sensitive Scan\n\nNot implemented in V1 beyond manual review prompt.\n"
+
+
+def register(subparsers):
+    parser = subparsers.add_parser("snapshot", help="Refresh git and command snapshots.")
+    parser.add_argument("--repo", type=Path, default=Path.cwd(), help="Repository path.")
+    parser.add_argument("--test-cmd", default=None, help="Optional test command string.")
+    parser.add_argument(
+        "--dependency-cmd",
+        default=None,
+        help="Optional dependency check command string.",
+    )
+    parser.set_defaults(handler=run)
+
+
+def command_report(label: str, command: str | None, repo: Path) -> str:
+    if not command:
+        return f"# {label}\n\nNo command configured.\n"
+
+    result = subprocess.run(
+        command,
+        cwd=repo,
+        text=True,
+        capture_output=True,
+        shell=True,
+        check=False,
+    )
+    return (
+        f"# {label}\n\n"
+        f"Command: {command}\n"
+        f"Exit code: {result.returncode}\n\n"
+        f"## stdout\n\n{result.stdout}\n"
+        f"## stderr\n\n{result.stderr}\n"
+    )
+
+
+def git_text(repo: Path, args: list[str]) -> str:
+    result = run_git(repo, args)
+    output = result.stdout + result.stderr
+    if result.returncode == 0:
+        return output
+    return (
+        f"Command failed: git {' '.join(args)}\n"
+        f"Exit code: {result.returncode}\n\n"
+        f"{output}"
+    )
+
+
+def render_sections(sections: list[tuple[str, str]]) -> str:
+    rendered = []
+    for title, text in sections:
+        body = text.rstrip() or "_No changes._"
+        rendered.append(f"## {title}\n\n{body}\n")
+    return "\n".join(rendered)
+
+
+def git_untracked_paths_or_error(repo: Path) -> tuple[list[str], str | None]:
+    result = run_git(repo, ["ls-files", "--others", "--exclude-standard", "-z"])
+    if result.returncode == 0:
+        return [item for item in result.stdout.split("\0") if item], None
+
+    output = (result.stdout + result.stderr).rstrip()
+    message = f"git ls-files failed (exit {result.returncode})"
+    if output:
+        message += f"\n\n{output}"
+    return [], message
+
+
+def repo_file_from_git_path(repo: Path, git_path: str) -> Path:
+    return repo.joinpath(*PurePosixPath(git_path).parts)
+
+
+def render_untracked_stat(paths: list[str], error: str | None) -> str:
+    if error:
+        return error
+    if not paths:
+        return ""
+    return "\n".join(f"{path} | untracked" for path in paths)
+
+
+def render_untracked_file_diff(repo: Path, git_path: str) -> str:
+    path = repo_file_from_git_path(repo, git_path)
+    header = (
+        f"diff --git a/{git_path} b/{git_path}\n"
+        "new file mode 100644\n"
+        "--- /dev/null\n"
+        f"+++ b/{git_path}\n"
+    )
+    if not path.is_file():
+        return header + "# Skipped: not a regular file.\n"
+
+    data = path.read_bytes()
+    if len(data) > MAX_UNTRACKED_DIFF_BYTES:
+        return (
+            header
+            + f"# Skipped: file is {len(data)} bytes, above the "
+            + f"{MAX_UNTRACKED_DIFF_BYTES} byte snapshot limit.\n"
+        )
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return header + "# Skipped: binary or non-UTF-8 file.\n"
+
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    if normalized == "":
+        return header + "@@\n"
+    body = "\n".join(f"+{line}" for line in normalized.splitlines())
+    return header + "@@\n" + body + "\n"
+
+
+def render_untracked_diff(repo: Path, paths: list[str], error: str | None) -> str:
+    if error:
+        return error
+    if not paths:
+        return ""
+    return "\n".join(render_untracked_file_diff(repo, path).rstrip() for path in paths) + "\n"
+
+
+def update_metadata_snapshot_time(metadata_path: Path, repo: Path) -> None:
+    if not metadata_path.exists():
+        return
+
+    snapshot_time = datetime.now().isoformat(timespec="seconds")
+    try:
+        data = json.loads(read_text(metadata_path))
+        if not isinstance(data, dict):
+            raise ValueError("metadata.json root is not an object")
+    except (json.JSONDecodeError, ValueError):
+        data = {
+            "repo": str(repo),
+            "created_at": snapshot_time,
+            "last_snapshot_at": None,
+            "metadata_warning": "metadata.json was invalid and was rebuilt by spoon snapshot.",
+        }
+
+    data["last_snapshot_at"] = snapshot_time
+    write_text(metadata_path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+
+
+def write_default_sensitive_scan(path: Path) -> None:
+    if path.exists() and read_text(path).strip():
+        return
+    write_text(path, DEFAULT_SENSITIVE_SCAN)
+
+
+def snapshot_file(paths, name: str) -> Path:
+    if name not in SNAPSHOT_FILES:
+        raise ValueError(f"unknown snapshot file: {name}")
+    return paths.snapshots / name
+
+
+def create_snapshot(repo: Path, test_cmd: str | None, dependency_cmd: str | None) -> None:
+    paths = project_paths(repo)
+    paths.snapshots.mkdir(parents=True, exist_ok=True)
+    untracked_paths, untracked_error = git_untracked_paths_or_error(repo)
+
+    write_text(snapshot_file(paths, "status.txt"), git_text(repo, ["status", "--short"]))
+    write_text(
+        snapshot_file(paths, "diff-stat.txt"),
+        render_sections(
+            [
+                ("Unstaged Diff Stat", git_text(repo, ["diff", "--stat"])),
+                ("Staged Diff Stat", git_text(repo, ["diff", "--cached", "--stat"])),
+                ("Untracked Files", render_untracked_stat(untracked_paths, untracked_error)),
+            ],
+        ),
+    )
+    write_text(
+        snapshot_file(paths, "diff.patch"),
+        render_sections(
+            [
+                ("Unstaged Diff", git_text(repo, ["diff"])),
+                ("Staged Diff", git_text(repo, ["diff", "--cached"])),
+                ("Untracked Files", render_untracked_diff(repo, untracked_paths, untracked_error)),
+            ],
+        ),
+    )
+    write_text(
+        snapshot_file(paths, "recent-commits.txt"),
+        git_text(repo, ["log", "--oneline", "-n", "10"]),
+    )
+    write_text(snapshot_file(paths, "test-output.txt"), command_report("Test Output", test_cmd, repo))
+    write_text(
+        snapshot_file(paths, "dependency-check.txt"),
+        command_report("Dependency Check", dependency_cmd, repo),
+    )
+    write_default_sensitive_scan(snapshot_file(paths, "sensitive-scan.txt"))
+    update_metadata_snapshot_time(paths.metadata, repo)
+
+
+def run(args: Namespace) -> int:
+    repo = find_repo_root(args.repo)
+    create_snapshot(repo, args.test_cmd, args.dependency_cmd)
+    print(f"Snapshot written to {project_paths(repo).snapshots}")
+    return 0

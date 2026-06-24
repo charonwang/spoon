@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spoon"
+version = "0.1.0"
+description = "Local CLI workflow helper for coordinating Cursor, Codex, and Claude Code."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Spoon contributors" }]
+keywords = ["cli", "cursor", "codex", "claude-code", "workflow", "developer-tools"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/charonwang/spoon"
+Repository = "https://github.com/charonwang/spoon"
+Issues = "https://github.com/charonwang/spoon/issues"
+
+[project.scripts]
+spoon = "spoon.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["spoon*"]

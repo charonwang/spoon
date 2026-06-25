@@ -50,6 +50,9 @@ python -m spoon init
 - [V1 usage guide](docs/v1-usage.md) — install, workflow, and commands for day-to-day use
 - [Design overview](docs/design-overview.md)
 - [Roadmap](docs/roadmap.md) — V2 plans
+- [V2 architecture](docs/v2-architecture.md)
+- [Host actions](docs/host-actions.md) — Codex, Cursor, Claude, and manual action contracts
+- [GitHub export policy](docs/export-policy.md)
 
 ## Quick Start
 
@@ -142,7 +145,7 @@ No dual compatibility is planned for V1.
 | V2C | `spoon-orchestrator` Skill |
 | V2D | `spoon export-github` + history validation template |
 
-Details: [docs/roadmap.md](docs/roadmap.md), [docs/v2-architecture.md](docs/v2-architecture.md), [docs/plans/v2-orchestrator-plan.md](docs/plans/v2-orchestrator-plan.md).
+Details: [docs/roadmap.md](docs/roadmap.md), [docs/v2-architecture.md](docs/v2-architecture.md), [docs/host-actions.md](docs/host-actions.md), [docs/export-policy.md](docs/export-policy.md), [docs/plans/v2-orchestrator-plan.md](docs/plans/v2-orchestrator-plan.md).
 
 ## Development
 

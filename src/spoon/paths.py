@@ -19,6 +19,11 @@ class ProjectPaths:
     review_board: Path
     handoff: Path
     metadata: Path
+    run_state: Path
+    actions: Path
+    events: Path
+    implementation: Path
+    config: Path
 
 
 def find_repo_root(start: Path) -> Path:
@@ -49,4 +54,9 @@ def project_paths(repo: Path) -> ProjectPaths:
         review_board=current / "review-board.md",
         handoff=current / "handoff.md",
         metadata=current / "metadata.json",
+        run_state=current / "run-state.json",
+        actions=current / "actions.json",
+        events=current / "events.jsonl",
+        implementation=current / "implementation.json",
+        config=spoon / "config.json",
     )

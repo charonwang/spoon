@@ -1,8 +1,10 @@
 # V2 Orchestrator Implementation Plan
 
-> **Status:** Planned — not implemented in `v0.1.x`.  
-> **Audience:** Implementers and reviewers.  
-> **Architecture:** [../v2-architecture.md](../v2-architecture.md)  
+> **Status:** Planned — not implemented in `v0.1.x`.
+> **Audience:** Implementers and reviewers.
+> **Architecture:** [../v2-architecture.md](../v2-architecture.md)
+> **Host actions:** [../host-actions.md](../host-actions.md)
+> **Export policy:** [../export-policy.md](../export-policy.md)
 > **Roadmap:** [../roadmap.md](../roadmap.md)
 
 ## Goal
@@ -85,6 +87,10 @@ tests/
   test_v2_acceptance.py
 ```
 
+## Implementation notes
+
+The detailed pre-Spoon draft is preserved locally at `docs/.design/spoon/plans/2026-06-19-ai-flow-v2-orchestrator-implementation-plan.md`. Use this public plan as the source of truth; use the `.design` draft only for historical test examples and rationale.
+
 ## Tasks
 
 Each task: write failing tests → implement → `python -m unittest discover -s tests -v` green. Do not auto-commit; user commits manually.
@@ -98,6 +104,7 @@ Each task: write failing tests → implement → `python -m unittest discover -s
 - `ProjectPaths`: add `run_state`, `actions`, `events`, `implementation`, `config`
 - Atomic JSON via temp file + `Path.replace()`
 - `init`: create `config.json` with `{"experimental_cursor_ui": false}` if missing (never overwrite)
+- `ImplementationRecord.status` is always `reported_complete`; it does not mean user accepted code
 
 **Tests:** `test_runner_model.py`, `test_runner_state_store.py`, extend `test_init_cmd.py`
 
@@ -110,7 +117,9 @@ Each task: write failing tests → implement → `python -m unittest discover -s
 - `load_actions`, `enqueue_action`, `complete_action`, `fail_action`, `append_event`
 - `rebuild_expected_actions` — deterministic ids: `sha256(run_id\\0phase\\0kind\\0prompt\\0output)[:16]`
 - Idempotent enqueue; complete requires non-empty output; SHA-256 digest in `action_completed` events
-- Corrupt `actions.json` → error, preserve file; missing → rebuild from phase + events
+- Missing `actions.json` → rebuild expected actions from current phase and events
+- Corrupt `actions.json` → error, preserve file; do not treat as empty queue
+- Recover completed status only when event id, output file, and output digest all match
 
 **Tests:** `test_runner_actions.py`
 
@@ -122,6 +131,7 @@ Each task: write failing tests → implement → `python -m unittest discover -s
 
 - `Adapter` protocol, `AdapterRequest`, `AdapterResult`, `AdapterStatus`
 - `ManualAdapter` → `needs_host` with `spoon action complete` instructions
+- Manual payload must include prompt path, output path, and exact completion command
 
 **Tests:** `test_manual_adapter.py`
 
@@ -134,6 +144,8 @@ Each task: write failing tests → implement → `python -m unittest discover -s
 - `plan_review_gate`, `code_review_gate`, `implementation_gate`, `final_check_gate`
 - Section-based parsing of `review-board.md` (`Blocking`, `Needs Triage`, …)
 - Empty headers and `_None._` must not block; gates do not edit `Decisions`
+- Gate checks use structured items only; no whole-file substring matching
+- `[CONFLICT]` reaches `Needs Triage` through the V1 review parser
 
 **Tests:** `test_runner_gates.py`
 
@@ -148,6 +160,7 @@ Each task: write failing tests → implement → `python -m unittest discover -s
 - Before `code_review`: `implementation.json` + completed action + post-implementation snapshot event
 - Host action kinds: `codex_thread_message`, `cursor_plan_ui`, `cursor_agent_ui`, `manual`
 - On exception: status `failed`, exit `21` (do not catch `KeyboardInterrupt` / `SystemExit`)
+- If `actions.json` is missing, call `rebuild_expected_actions`; if corrupt, return exit `21`
 
 **Tests:** `test_runner_engine.py`
 
@@ -160,6 +173,8 @@ Each task: write failing tests → implement → `python -m unittest discover -s
 - Subprocess, no shell; verify `claude --help` on target machine for flags
 - Structured JSON: `verdict`, `summary`, `findings_markdown` → neutral Markdown review file
 - Generated reviews must pass `classify_review_text()` without `[PARSER WARNING]`
+- Render verdict under `## Verdict`, not as a bare `Verdict: approved` line
+- If `--json-schema` or equivalent structured-output support is missing, fall back to prompt-level JSON instructions plus local validation
 - Unavailable → engine exit `20` + manual action
 
 **Tests:** `test_claude_cli_adapter.py` (mock subprocess)
@@ -178,6 +193,8 @@ spoon action list|complete|fail ...
 - JSON output: `exit_code`, `phase`, `status`, `pending_decision`, `actions`
 - `--continue` requires existing `run-state.json`
 - `action complete`: path safety inside repo; implementation actions write `implementation.json` atomically
+- `action complete` must reject path traversal and undeclared outputs
+- Implementation marker write must not split from action completion
 
 **Tests:** `test_run_action_cli.py`
 
@@ -189,6 +206,8 @@ spoon action list|complete|fail ...
 
 - Loop around `spoon run --json`; pause on exit `10`; host actions on `11`/`20`
 - Static contract tests: no Superpowers, no auto-commit, default no Cursor UI automation
+- Follow [host-actions.md](../host-actions.md) for Codex, Cursor, and manual fallback semantics
+- Never paste full plan/review bodies when a path is enough
 
 **Tests:** `test_orchestrator_skill.py`
 
@@ -200,6 +219,8 @@ spoon action list|complete|fail ...
 
 - Full temp-repo flow through `archive_ready` without git commit
 - Failure recovery: timeout, bad JSON, duplicate run/complete, missing output, corrupt/missing `actions.json`
+- Verify implementation action completion writes `implementation.json`, then a fresh snapshot is required before code review
+- Verify repeated runs do not duplicate actions or review files
 
 ---
 
@@ -208,10 +229,12 @@ spoon action list|complete|fail ...
 **Deliverables:** `export_policy.py`, `commands/export_cmd.py`, `github/history-template/`
 
 - `build_github_export`, `scan_export_tree`, `spoon export-github`
-- Allowlist / blocklist per [v2-architecture.md](../v2-architecture.md)
+- Allowlist / blocklist per [export-policy.md](../export-policy.md)
 - Reuse `path_policy.rewrite_local_links_for_export`
 - Blocking findings → no output dir; warnings → `export-report.md`
 - History template CI rejects forbidden patterns (shared rules with `export_policy`)
+- `snapshot-summary.json` must include `raw_snapshots_exported: false`
+- No Git or GitHub write operations
 
 **Tests:** `test_github_export.py`
 

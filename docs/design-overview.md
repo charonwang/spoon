@@ -36,4 +36,6 @@ V2 adds a resumable Runner (`spoon run`), host-action orchestration via the `spo
 
 - [Roadmap](roadmap.md) — phases, exit codes, non-goals
 - [V2 architecture](v2-architecture.md) — components, phases, state files
+- [Host actions](host-actions.md) — host execution and manual fallback contract
+- [GitHub export policy](export-policy.md) — redacted export rules
 - [Implementation plan](plans/v2-orchestrator-plan.md) — task list for contributors

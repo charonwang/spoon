@@ -91,6 +91,22 @@ class InitCommandTests(unittest.TestCase):
             create_current_layout(repo)
             self.assertEqual((current / "brief.md").read_text(encoding="utf-8"), "custom\n")
 
+    def test_config_json_created_once(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            create_current_layout(repo)
+            config = repo / ".spoon" / "config.json"
+            self.assertTrue(config.exists())
+            original = config.read_text(encoding="utf-8")
+            config.write_text('{"experimental_cursor_ui": true}\n', encoding="utf-8")
+            create_current_layout(repo)
+            self.assertEqual(
+                config.read_text(encoding="utf-8"),
+                '{"experimental_cursor_ui": true}\n',
+            )
+            self.assertIn('"experimental_cursor_ui": false', original)
+
 
 if __name__ == "__main__":
     unittest.main()

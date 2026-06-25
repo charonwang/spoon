@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ..constants import PROMPT_FILES, REVIEW_FILES, SNAPSHOT_FILES
 from ..git_util import run_git
-from ..io_util import append_unique_line, write_text
+from ..io_util import append_unique_line, write_json_atomic, write_text
 from ..paths import find_repo_root, project_paths
 from ..templates import blank_template, brief_template, metadata_template, review_board_template
 
@@ -52,6 +52,9 @@ def create_current_layout(repo: Path) -> None:
         write_if_missing(paths.reviews / name, blank_template())
     for name in SNAPSHOT_FILES:
         write_if_missing(paths.snapshots / name, blank_template())
+
+    if not paths.config.exists():
+        write_json_atomic(paths.config, {"experimental_cursor_ui": False})
 
     ensure_git_exclude(paths.repo)
 

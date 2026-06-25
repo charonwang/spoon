@@ -1,9 +1,11 @@
 from . import adopt_plan_cmd
+from . import action_cmd
 from . import archive_cmd
 from . import board_cmd
 from . import handoff_cmd
 from . import init_cmd
 from . import prompts_cmd
+from . import run_cmd
 from . import snapshot_cmd
 
 COMMAND_MODULES = [
@@ -14,5 +16,7 @@ COMMAND_MODULES = [
     board_cmd,
     handoff_cmd,
     archive_cmd,
+    run_cmd,
+    action_cmd,
 ]
 

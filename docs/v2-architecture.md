@@ -2,6 +2,12 @@
 
 V2 adds an orchestration layer on top of V1 file commands. This document is the design contract for implementers; it does not describe shipped behavior until V2 code is released.
 
+Companion contracts:
+
+- [Host actions](host-actions.md)
+- [GitHub export policy](export-policy.md)
+- [Implementation plan](plans/v2-orchestrator-plan.md)
+
 ## Design principles
 
 1. **Files are truth** — Plans, reviews, board decisions, handoffs, and snapshots stay human-readable under `.spoon/current/`.
@@ -85,6 +91,18 @@ brief
 
 Each action has a deterministic id (hash of run id, phase, kind, prompt path, output path — no timestamps in ids).
 
+| Field | Role |
+| --- | --- |
+| `id` | Deterministic action id |
+| `kind` | `claude_review`, `codex_thread_message`, `cursor_plan_ui`, `cursor_agent_ui`, or `manual` |
+| `status` | `pending`, `completed`, or `failed` |
+| `prompt_path` | Prompt or input path |
+| `output_path` | Declared output path |
+| `working_directory` | Target repository |
+| `payload` | Kind-specific metadata |
+| `attempts` | Execution attempts |
+| `created_at` / `updated_at` | ISO-8601 timestamps |
+
 | Kind | Executed by |
 | --- | --- |
 | `claude_review` | `ClaudeCliAdapter` in Python |
@@ -95,7 +113,21 @@ Each action has a deterministic id (hash of run id, phase, kind, prompt path, ou
 
 ### Events (`events.jsonl`)
 
-Append-only records: phase changes, action enqueued/completed/failed, queue rebuilds, runner failures. Used for audit and action recovery.
+Append-only records: phase changes, action enqueued/completed/failed, queue rebuilds, runner failures. Used for audit and action recovery. `action_completed` events include action id and output SHA-256 digest.
+
+### ImplementationRecord (`implementation.json`)
+
+This file is written only after an implementation action completes.
+
+| Field | Role |
+| --- | --- |
+| `schema_version` | Starts at `1` |
+| `status` | Always `reported_complete` |
+| `action_id` | Completed implementation action |
+| `completed_at` | ISO-8601 timestamp |
+| `summary_path` | Implementation summary output |
+
+It is a host-completion marker, not a code-acceptance decision.
 
 ## Adapters
 
@@ -139,19 +171,23 @@ Host rules (see Skill `references/action-kinds.md` when added):
 - **Cursor Plan UI** — manual by default; experimental mode requires workspace + Plan Mode confirmation
 - **Cursor Agent UI** — requires approved `handoff.md`; completes implementation action only; does not auto-approve plans
 
+Detailed action contracts are in [host-actions.md](host-actions.md).
+
 ## GitHub export (`spoon export-github`)
 
 Produces a **candidate** tree under `<destination>/tasks/<project>/<task>/` for human review before any Git push.
 
-**Allowlist (examples):** `brief.md`, `plan.md`, `review-board.md`, `handoff.md`, `index.json`, `snapshot-summary.json`, `export-report.md`
+**Allowlist:** `brief.md`, `plan.md`, `review-board.md`, `handoff.md`, `index.json`, `snapshot-summary.json`, `export-report.md`
 
 **Blocked:** raw snapshots, diffs, test output, transcripts, `session_id` / `thread_id`, long code fences (>60 lines), unresolved local paths.
 
 Local `file:///…` links are rewritten to `repo://<alias>/<relative>#L<n>` using V1 `path_policy`. Blocking findings prevent creating the final directory; warnings are recorded in `export-report.md`.
 
-`snapshot-summary.json` contains counts and pass/fail enums only — no file names, diffs, or paths.
+`snapshot-summary.json` contains counts and pass/fail enums only — no file names, diffs, or paths. `raw_snapshots_exported` is always `false`.
 
 Optional `github/history-template/` supplies CI to validate a separate **spoon-history** repository.
+
+Full export rules are in [export-policy.md](export-policy.md).
 
 ## Repository boundaries
 
@@ -179,7 +215,8 @@ V2 must keep calling these Python entry points (names in `spoon.commands.*`):
 - JSON writes: temp file in the same directory, then `Path.replace()` atomically
 - Corrupt `actions.json` → exit `21`, do not treat as empty queue
 - Missing `actions.json` → rebuild from phase + deterministic ids + event log
-- Completed action output deleted → revert action to pending
+- Completed action recovery requires matching `action_completed` event, current output file, and output digest
+- Completed action output deleted or digest mismatch → recover action as pending
 
 ## Security notes
 

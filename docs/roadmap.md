@@ -35,7 +35,9 @@ File-based CLI. Humans and AI tools share workflow state under `.spoon/current/`
 
 **Truth source:** `.spoon/current/` remains the only workflow source of truth. The Runner owns phase state; the Skill is a stateless host executor.
 
-Detailed architecture: [v2-architecture.md](v2-architecture.md).  
+Detailed architecture: [v2-architecture.md](v2-architecture.md).
+Host action contract: [host-actions.md](host-actions.md).
+GitHub export policy: [export-policy.md](export-policy.md).
 Task breakdown: [plans/v2-orchestrator-plan.md](plans/v2-orchestrator-plan.md).
 
 ### Phases

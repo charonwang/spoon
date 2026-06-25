@@ -4,6 +4,7 @@ import json
 from argparse import Namespace
 from pathlib import Path
 
+from ..adapters.claude_cli import ClaudeCliAdapter
 from ..adapters.manual import ManualAdapter
 from ..paths import find_repo_root, project_paths
 from ..runner.engine import advance, new_run_id
@@ -45,7 +46,13 @@ def run(args: Namespace) -> int:
         state = RunState.new(new_run_id())
         save_run_state(paths, state)
 
-    result = advance(repo, {"manual": ManualAdapter()})
+    result = advance(
+        repo,
+        {
+            "claude_review": ClaudeCliAdapter(),
+            "manual": ManualAdapter(),
+        },
+    )
     if args.json:
         print(json.dumps(runner_payload(result), ensure_ascii=False, indent=2))
     else:

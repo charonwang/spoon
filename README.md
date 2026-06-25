@@ -130,14 +130,6 @@ file:///C:/path/to/your/repo/internal/file.go#L82
 
 Avoid raw Windows paths such as `C:\path\to\file.go:82`.
 
-## Migrating From Old `.ai-flow/` Drafts
-
-```powershell
-Rename-Item .ai-flow .spoon
-```
-
-Ensure `.git/info/exclude` contains `.spoon/`. No dual compatibility with `.ai-flow/`.
-
 ## Development
 
 When `py -3.11 --version` works:

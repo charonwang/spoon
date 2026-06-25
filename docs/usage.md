@@ -14,6 +14,8 @@ You, Cursor, Codex, and Claude Code read the same files. For automated phase adv
 
 Use **Python 3.11+ with pip**. On Windows, prefer the `py` launcher so you do not pick a `python` without pip.
 
+> Examples use Windows PowerShell. On macOS/Linux, replace `\` path separators with `/` and use `.venv/bin/python` instead of `.venv\Scripts\python.exe`.
+
 List installed interpreters, then verify the launcher tag works:
 
 ```powershell
@@ -108,7 +110,7 @@ Edit `.spoon/current/brief.md` with goals, constraints, and out-of-scope items.
 After creating or exporting a Cursor plan:
 
 ```powershell
-spoon adopt-plan --source "C:\path\to\cursor.plan.md"
+spoon adopt-plan --source "D:\path\to\cursor.plan.md"
 spoon adopt-plan --source ".\plan.md" --replace
 ```
 
@@ -125,13 +127,12 @@ Avoid raw paths such as `C:\path\file.go:82` or `C:/path/file.go:82`.
 ### 3. Capture snapshots
 
 ```powershell
-spoon snapshot --test-cmd "python -m unittest discover -s tests -p \"test_*.py\""
-spoon snapshot --dependency-cmd "go mod verify"
+spoon snapshot --test-cmd "python -m unittest discover -s tests -p \"test_*.py\"" --dependency-cmd "go mod verify"
 ```
 
-Writes under `.spoon/current/snapshots/`.
+`--test-cmd` and `--dependency-cmd` can be passed together (as above) or separately; omit either to skip that capture. Writes under `.spoon/current/snapshots/`.
 
-Re-run `snapshot` after code or test changes. Snapshot writes are sequential, not transactional; rerun if interrupted.
+Re-run `snapshot` after code or test changes. Each run overwrites the snapshot files. Writes are sequential, not transactional; rerun if interrupted.
 
 ### 4. Generate review prompts
 
@@ -178,16 +179,17 @@ spoon archive --archive-root "D:\Charon\Project\archives" --project my-project -
 
 ### 10. Runner loop (optional)
 
-Advance one workflow phase per call:
+`spoon run` advances at most one phase per call; loop on it (or let the `spoon-orchestrator` Skill loop) to walk the workflow. Without `--continue`, a missing `run-state.json` starts a fresh run. With `--continue`, the Runner requires an existing `run-state.json` and errors out instead of starting over — use it once a run is underway:
 
 ```powershell
 spoon run --repo . --json
+spoon run --repo . --continue --json
 spoon action list --repo .
 spoon action complete --id <id> --output .spoon/current/reviews/codex-plan.md
 spoon action fail --id <id> --message "reason"
 ```
 
-Exit codes: `0` stable, `10` user decision, `11` host action pending, `20` manual fallback, `21` runner failure. See [architecture](architecture.md).
+Exit codes: `0` stable, `10` user decision, `11` host action pending, `20` manual fallback, `21` runner failure. Full table: [architecture](architecture.md).
 
 ### 11. GitHub export (optional)
 
@@ -201,7 +203,7 @@ See [export policy](export-policy.md).
 
 ## Command Reference
 
-All commands accept `--repo PATH` when you are not in the repository directory.
+This table is the canonical command list; other docs link here instead of repeating it. All commands accept `--repo PATH` when you are not in the repository directory.
 
 | Command | Purpose |
 | --- | --- |
@@ -224,20 +226,10 @@ All commands accept `--repo PATH` when you are not in the repository directory.
 
 Final review judgment and Git operations remain yours.
 
-## Migrating From `.ai-flow/`
-
-```powershell
-Rename-Item .ai-flow .spoon
-```
-
-Ensure `.git/info/exclude` contains:
-
-```text
-.spoon/
-```
-
 ## Related Docs
 
 - [Design overview](design-overview.md)
-- [Architecture](architecture.md)
+- [Architecture](architecture.md) — Runner, gates, adapters, exit codes
+- [Host actions](host-actions.md) — Codex, Cursor, Claude, manual contracts
+- [GitHub export policy](export-policy.md)
 - [Roadmap](roadmap.md)

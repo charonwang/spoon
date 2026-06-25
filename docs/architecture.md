@@ -4,7 +4,6 @@ Design contract for the Spoon orchestration layer and file workflow. Companion c
 
 - [Host actions](host-actions.md)
 - [GitHub export policy](export-policy.md)
-- [Implementation plan (historical)](plans/v2-orchestrator-plan.md)
 
 ## Design principles
 

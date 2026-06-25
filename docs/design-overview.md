@@ -14,20 +14,9 @@ Spoon manages workflow artifacts only. It does not change application code, stag
 
 ## Commands
 
-| Command | Purpose |
-| --- | --- |
-| `spoon init` | Create `.spoon/current/`; exclude `.spoon/` via `.git/info/exclude` |
-| `spoon adopt-plan` | Move a Cursor plan into `plan.md` |
-| `spoon snapshot` | Capture Git status, diffs, tests, dependency checks, sensitive-scan notes |
-| `spoon prompts` | Write reusable review and check prompts |
-| `spoon board` | Summarize raw reviews into `review-board.md` (preserves human decisions) |
-| `spoon handoff` | Build implementation handoff from accepted board items |
-| `spoon archive` | Archive the current task; recreate empty `current/` |
-| `spoon run` | Advance workflow one phase; optional `--continue`, `--json` |
-| `spoon action` | List, complete, or fail host actions |
-| `spoon export-github` | Build redacted export candidate for review before GitHub push |
+Spoon provides file-workflow commands (`init`, `adopt-plan`, `snapshot`, `prompts`, `board`, `handoff`, `archive`) and orchestration commands (`run`, `action`, `export-github`).
 
-Day-to-day walkthrough: [usage.md](usage.md).
+Full command reference and day-to-day walkthrough: [usage.md](usage.md).
 
 ## Architecture (summary)
 
@@ -54,4 +43,3 @@ Phase graph, gates, exit codes, and persistence rules: [architecture.md](archite
 - [Host actions](host-actions.md) — Codex, Cursor, Claude, and manual contracts
 - [GitHub export policy](export-policy.md) — redacted export rules
 - [Roadmap](roadmap.md) — release history and what comes next
-- [Implementation plan](plans/v2-orchestrator-plan.md) — contributor task history

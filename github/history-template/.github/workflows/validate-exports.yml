@@ -1,0 +1,22 @@
+name: Validate spoon-history exports
+
+on:
+  push:
+    paths:
+      - "tasks/**"
+  pull_request:
+    paths:
+      - "tasks/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Spoon export validator
+        run: pip install "spoon @ git+https://github.com/your-org/spoon.git"
+      - name: Validate task exports
+        run: python scripts/validate_exports.py --root tasks

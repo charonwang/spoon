@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import shutil
 from argparse import Namespace
 from datetime import datetime
 from pathlib import Path, PurePosixPath, PureWindowsPath
-import shutil
 
 from ..io_util import read_text
 from ..paths import find_repo_root, project_paths

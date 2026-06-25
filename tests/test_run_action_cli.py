@@ -1,20 +1,25 @@
-import json
 import subprocess
 import tempfile
 import unittest
 from argparse import Namespace
 from pathlib import Path
-
 from unittest.mock import patch
 
 from spoon.commands.action_cmd import run_complete, run_fail, run_list
-from spoon.commands.init_cmd import create_current_layout, run as init_run
+from spoon.commands.init_cmd import run as init_run
 from spoon.commands.run_cmd import run as run_cmd
 from spoon.io_util import write_text
 from spoon.paths import project_paths
-from spoon.runner.actions import action_id, complete_action, enqueue_action, fail_action, load_actions
-from spoon.runner.model import ActionKind, ActionStatus, ImplementationRecord, RunPhase, WorkflowAction, utc_now_iso
-from spoon.runner.state_store import load_implementation, load_run_state, save_run_state
+from spoon.runner.actions import action_id, complete_action, enqueue_action, load_actions
+from spoon.runner.model import (
+    ActionKind,
+    ActionStatus,
+    ImplementationRecord,
+    RunPhase,
+    WorkflowAction,
+    utc_now_iso,
+)
+from spoon.runner.state_store import load_implementation
 
 
 class RunActionCliTests(unittest.TestCase):

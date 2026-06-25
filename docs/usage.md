@@ -1,8 +1,8 @@
-# Spoon V1 Usage Guide
+# Spoon Usage Guide
 
-Spoon V1 is a **semi-automated file workflow**. It maintains Markdown and snapshot files under `.spoon/current/` in your business repository. It does **not** modify application code, run agents for you, or create Git commits.
+Spoon is a **local file workflow CLI**. It maintains Markdown and snapshot files under `.spoon/current/` in your business repository. It does **not** modify application code or create Git commits.
 
-You, Cursor, Codex, and Claude Code read the same files and coordinate manually. V1 has no `spoon run` orchestrator (that is V2).
+You, Cursor, Codex, and Claude Code read the same files. For automated phase advancement, use `spoon run` and the `spoon-orchestrator` Skill (see [architecture](architecture.md) and [host actions](host-actions.md)).
 
 ## Requirements
 
@@ -12,20 +12,58 @@ You, Cursor, Codex, and Claude Code read the same files and coordinate manually.
 
 ## One-Time Install
 
+Use **Python 3.11+ with pip**. On Windows, prefer the `py` launcher so you do not pick a `python` without pip.
+
+List installed interpreters, then verify the launcher tag works:
+
 ```powershell
-cd D:\Charon\Project\Spoon
+py -0p
+py -3.11 --version
+```
+
+When `py -3.11 --version` succeeds:
+
+```powershell
+cd <spoon-checkout>
+py -3.11 -m pip install -e .
+spoon --help
+```
+
+If `py -0p` lists 3.11 but `py -3.11 --version` fails, use the uv path below instead.
+
+If `pip` is missing on the interpreter you chose:
+
+```powershell
+py -3.11 -m ensurepip --upgrade
+py -3.11 -m pip install -e .
+```
+
+With [uv](https://docs.astral.sh/uv/) (recommended when `py -3.11 --version` fails):
+
+```powershell
+cd <spoon-checkout>
+uv venv --python 3.11
+uv pip install -e .
+.\.venv\Scripts\activate
+spoon --help
+```
+
+Without activating the venv:
+
+```powershell
+.\.venv\Scripts\python.exe -m spoon --help
+```
+
+If your default `python` already has pip:
+
+```powershell
 python -m pip install -e .
 spoon --help
 ```
 
 If `spoon` is not on your `PATH`, use `python -m spoon` instead.
 
-After moving or cloning Spoon to a new path, reinstall:
-
-```powershell
-cd <spoon-checkout>
-python -m pip install -e .
-```
+After moving or cloning Spoon to a new path, reinstall with the same interpreter you used initially (for example `py -3.11 -m pip install -e .` or `uv pip install -e .` in the existing `.venv`).
 
 ## Initialize a Business Repository
 
@@ -56,6 +94,8 @@ brief → plan → plan review → board decisions → handoff → implement →
 | 8 | Generate implementation handoff | `spoon handoff` |
 | 9 | Implement in Cursor; repeat review cycle | `spoon snapshot`, `spoon board`, … |
 | 10 | Archive when done | `spoon archive` |
+
+Optionally drive phase transitions with `spoon run --json` and complete host actions via `spoon action complete`.
 
 ## Step-by-Step
 
@@ -89,12 +129,7 @@ spoon snapshot --test-cmd "python -m unittest discover -s tests -p \"test_*.py\"
 spoon snapshot --dependency-cmd "go mod verify"
 ```
 
-Writes under `.spoon/current/snapshots/`:
-
-- `status.txt` — Git status including untracked files
-- `diff-stat.txt`, `diff.patch` — unstaged, staged, and untracked sections
-- `test-output.txt`, `dependency-check.txt`, `sensitive-scan.txt`
-- recent commit metadata
+Writes under `.spoon/current/snapshots/`.
 
 Re-run `snapshot` after code or test changes. Snapshot writes are sequential, not transactional; rerun if interrupted.
 
@@ -104,33 +139,11 @@ Re-run `snapshot` after code or test changes. Snapshot writes are sequential, no
 spoon prompts
 ```
 
-Files appear in `.spoon/current/prompts/`:
-
-| File | Use with |
-| --- | --- |
-| `cursor-plan.md` | Cursor — create or revise the plan |
-| `codex-plan-review.md` | Codex — plan review |
-| `claude-plan-review.md` | Claude Code — plan review |
-| `cursor-implement.md` | Cursor — implement from handoff |
-| `codex-code-review.md` | Codex — code review |
-| `claude-code-review.md` | Claude Code — code review |
-| `final-plan-review.md` | Independent final plan review |
-| `final-check.md` | Pre-merge / pre-release checks |
-| `commit-message.md` | Draft commit message from snapshots and handoff |
-
-Copy the prompt into your AI tool and reference files under `.spoon/current/` (for example with `@` in Cursor).
+Copy the prompt into your AI tool and reference files under `.spoon/current/`.
 
 ### 5. Collect review outputs
 
-Save each tool's output under `.spoon/current/reviews/`, for example:
-
-```text
-reviews/cursor-plan.md
-reviews/codex-plan.md
-reviews/claude-plan.md
-```
-
-Filenames are flexible; Spoon reads whatever is in that directory.
+Save each tool's output under `.spoon/current/reviews/`.
 
 ### 6. Summarize into the review board
 
@@ -138,7 +151,7 @@ Filenames are flexible; Spoon reads whatever is in that directory.
 spoon board
 ```
 
-Updates the generated sections of `.spoon/current/review-board.md`. **You** edit the human sections—especially `Accepted For Handoff`. Resolve or explicitly defer items in `Blocking` and `Needs Triage` before implementation.
+Updates the generated sections of `.spoon/current/review-board.md`. **You** edit the human sections—especially `Accepted For Handoff`.
 
 ### 7. Generate the implementation handoff
 
@@ -146,7 +159,7 @@ Updates the generated sections of `.spoon/current/review-board.md`. **You** edit
 spoon handoff
 ```
 
-Creates `.spoon/current/handoff.md` from accepted board items. In Cursor, use `prompts/cursor-implement.md` together with `handoff.md` and `plan.md`.
+Creates `.spoon/current/handoff.md` from accepted board items.
 
 ### 8. After implementation — review again
 
@@ -163,27 +176,32 @@ Save new reviews → `spoon board` → your decisions → `spoon handoff` if nee
 spoon archive --archive-root "D:\Charon\Project\archives" --project my-project --task my-task-name
 ```
 
-Moves the current task into `<archive-root>/<project>/<timestamp>-<task>/` and recreates an empty `.spoon/current/` for the next task.
+### 10. Runner loop (optional)
 
-Example layout:
+Advance one workflow phase per call:
 
-```text
-D:\Charon\Project\archives\
-  my-project\
-    2026-06-24-my-task-name\
-      brief.md
-      plan.md
-      review-board.md
-      ...
+```powershell
+spoon run --repo . --json
+spoon action list --repo .
+spoon action complete --id <id> --output .spoon/current/reviews/codex-plan.md
+spoon action fail --id <id> --message "reason"
 ```
+
+Exit codes: `0` stable, `10` user decision, `11` host action pending, `20` manual fallback, `21` runner failure. See [architecture](architecture.md).
+
+### 11. GitHub export (optional)
+
+Build a redacted export candidate for human review before any push:
+
+```powershell
+spoon export-github --repo . --destination D:\exports\candidate --project my-project --task my-task
+```
+
+See [export policy](export-policy.md).
 
 ## Command Reference
 
-All commands accept `--repo PATH` when you are not in the repository directory:
-
-```powershell
-spoon snapshot --repo "D:\path\to\repo" --test-cmd "pytest -q"
-```
+All commands accept `--repo PATH` when you are not in the repository directory.
 
 | Command | Purpose |
 | --- | --- |
@@ -194,19 +212,19 @@ spoon snapshot --repo "D:\path\to\repo" --test-cmd "pytest -q"
 | `spoon board` | Summarize `reviews/` into `review-board.md` |
 | `spoon handoff` | Build `handoff.md` from accepted items |
 | `spoon archive` | Archive task; requires `--archive-root`, `--project`, `--task` |
+| `spoon run [--continue] [--json]` | Advance workflow by one phase |
+| `spoon action list`, `complete`, `fail` | Host action queue |
+| `spoon export-github` | Redacted export candidate directory |
 
-## What Spoon Does Not Do (V1)
+## What Spoon Does Not Do
 
 - Stage, commit, or push business code
 - Read private chat logs or editor internals
 - Auto-accept or auto-reject review findings
-- Orchestrate tools automatically (no `spoon run` yet)
 
 Final review judgment and Git operations remain yours.
 
 ## Migrating From `.ai-flow/`
-
-If an early draft used `.ai-flow/`:
 
 ```powershell
 Rename-Item .ai-flow .spoon
@@ -218,9 +236,8 @@ Ensure `.git/info/exclude` contains:
 .spoon/
 ```
 
-Spoon does not maintain dual compatibility with `.ai-flow/`.
-
 ## Related Docs
 
-- [Design overview](design-overview.md) — V1 scope and commands
-- [Roadmap](roadmap.md) — V2 orchestrator plans
+- [Design overview](design-overview.md)
+- [Architecture](architecture.md)
+- [Roadmap](roadmap.md)

@@ -1,7 +1,7 @@
+import json
 import subprocess
 import tempfile
 import unittest
-import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -125,7 +125,8 @@ class SnapshotCommandTests(unittest.TestCase):
 
             metadata = json.loads((repo / ".spoon" / "current" / "metadata.json").read_text(encoding="utf-8"))
             self.assertIsNotNone(metadata["last_snapshot_at"])
-            dependency_output = (repo / ".spoon" / "current" / "snapshots" / "dependency-check.txt").read_text(encoding="utf-8")
+            dependency_path = repo / ".spoon" / "current" / "snapshots" / "dependency-check.txt"
+            dependency_output = dependency_path.read_text(encoding="utf-8")
             self.assertIn("Command: python --version", dependency_output)
             self.assertIn("Exit code:", dependency_output)
 

@@ -17,9 +17,10 @@ spoon-history/
         index.json
         snapshot-summary.json
         export-report.md
+  scripts/
+    validate_exports.py
   .github/
     workflows/validate-exports.yml
-    scripts/validate_exports.py
 ```
 
 ## Validation
@@ -42,6 +43,6 @@ python github/history-template/scripts/validate_exports.py --root tasks/demo/tas
 
 ## Notes
 
-- Replace the pip install URL in the workflow with your Spoon repository.
+- **Required after copy:** edit `.github/workflows/validate-exports.yml` and replace `YOUR_GITHUB_USER` in the `pip install` line with the GitHub user or org that hosts your Spoon fork (for example `charonwang`).
 - Raw snapshot artifacts, session ids, and unresolved local paths are blocking.
 - `snapshot-summary.json` must keep `raw_snapshots_exported: false`.

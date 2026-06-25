@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
-import re
 from urllib.parse import unquote
 
 PATH_TOKEN_RE = re.compile(

@@ -4,9 +4,13 @@ on:
   push:
     paths:
       - "tasks/**"
+      - "scripts/**"
+      - ".github/workflows/validate-exports.yml"
   pull_request:
     paths:
       - "tasks/**"
+      - "scripts/**"
+      - ".github/workflows/validate-exports.yml"
 
 jobs:
   validate:
@@ -17,6 +21,6 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install Spoon export validator
-        run: pip install "spoon @ git+https://github.com/your-org/spoon.git"
+        run: pip install "spoon @ git+https://github.com/YOUR_GITHUB_USER/spoon.git"
       - name: Validate task exports
         run: python scripts/validate_exports.py --root tasks

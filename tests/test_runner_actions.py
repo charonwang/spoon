@@ -1,4 +1,3 @@
-import json
 import subprocess
 import tempfile
 import unittest
@@ -15,7 +14,6 @@ from spoon.runner.actions import (
     enqueue_action,
     ensure_actions,
     load_actions,
-    output_digest,
     rebuild_expected_actions,
 )
 from spoon.runner.model import ActionKind, ActionStatus, RunState, WorkflowAction, utc_now_iso
@@ -80,7 +78,8 @@ class RunnerActionsTests(unittest.TestCase):
                 complete_action(self.paths, self.action.id, output)
         stored = load_actions(self.paths)[0]
         self.assertEqual(stored.status, ActionStatus.PENDING)
-        self.assertFalse(any("action_completed" in line for line in self.paths.events.read_text(encoding="utf-8").splitlines()))
+        event_lines = self.paths.events.read_text(encoding="utf-8").splitlines()
+        self.assertFalse(any("action_completed" in line for line in event_lines))
 
     def test_rebuild_from_missing_actions_file(self):
         enqueue_action(self.paths, self.action)

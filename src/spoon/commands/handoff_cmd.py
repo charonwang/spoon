@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import re
 from argparse import Namespace
 from pathlib import Path
-import re
 
 from ..constants import GENERATED_START
 from ..io_util import read_text, write_text

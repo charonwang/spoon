@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import tempfile
 from argparse import Namespace
 from datetime import datetime
 from pathlib import Path
-import tempfile
 
 from ..io_util import read_text, write_text
 from ..path_policy import find_bad_plan_links

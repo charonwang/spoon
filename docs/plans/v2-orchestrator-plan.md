@@ -1,8 +1,8 @@
 # V2 Orchestrator Implementation Plan
 
-> **Status:** Planned — not implemented in `v0.1.x`.
+> **Status:** Historical — implemented in `v0.2.0`. Kept for contributor reference.
 > **Audience:** Implementers and reviewers.
-> **Architecture:** [../v2-architecture.md](../v2-architecture.md)
+> **Architecture:** [../architecture.md](../architecture.md)
 > **Host actions:** [../host-actions.md](../host-actions.md)
 > **Export policy:** [../export-policy.md](../export-policy.md)
 > **Roadmap:** [../roadmap.md](../roadmap.md)
@@ -89,7 +89,7 @@ tests/
 
 ## Implementation notes
 
-The detailed pre-Spoon draft is preserved locally at `docs/.design/spoon/plans/2026-06-19-ai-flow-v2-orchestrator-implementation-plan.md`. Use this public plan as the source of truth; use the `.design` draft only for historical test examples and rationale.
+This public plan is the source of truth for what shipped. Older private design drafts are not published with this repository.
 
 ## Tasks
 
@@ -156,7 +156,7 @@ Each task: write failing tests → implement → `python -m unittest discover -s
 **Deliverables:** `runner/engine.py`
 
 - `advance(repo, adapters) -> RunnerResult` — one phase per call
-- Phase transitions per [v2-architecture.md](../v2-architecture.md)
+- Phase transitions per [architecture.md](../architecture.md)
 - Before `code_review`: `implementation.json` + completed action + post-implementation snapshot event
 - Host action kinds: `codex_thread_message`, `cursor_plan_ui`, `cursor_agent_ui`, `manual`
 - On exception: status `failed`, exit `21` (do not catch `KeyboardInterrupt` / `SystemExit`)

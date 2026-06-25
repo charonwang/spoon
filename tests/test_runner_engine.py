@@ -8,12 +8,10 @@ from spoon.commands.adopt_plan_cmd import adopt_plan
 from spoon.commands.init_cmd import create_current_layout
 from spoon.constants import GENERATED_END, GENERATED_START
 from spoon.io_util import write_text
-from spoon.commands.action_cmd import run_complete
 from spoon.paths import project_paths
 from spoon.runner.actions import fail_action
 from spoon.runner.engine import advance
-from spoon.runner.model import ActionKind, ActionStatus, RunPhase, RunStatus
-from spoon.runner.state_store import load_run_state, save_run_state
+from spoon.runner.model import ActionKind, RunPhase, RunStatus
 
 
 class FakeClaudeAdapter:

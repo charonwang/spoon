@@ -1,7 +1,11 @@
 import unittest
 from pathlib import Path
 
-from spoon.path_policy import find_bad_plan_links, iter_local_path_tokens, rewrite_local_links_for_export
+from spoon.path_policy import (
+    find_bad_plan_links,
+    iter_local_path_tokens,
+    rewrite_local_links_for_export,
+)
 
 
 class PathPolicyTests(unittest.TestCase):

@@ -11,9 +11,8 @@ from ..git_util import run_git
 from ..io_util import read_text, write_text
 from ..paths import find_repo_root, project_paths
 
-
 MAX_UNTRACKED_DIFF_BYTES = 200_000
-DEFAULT_SENSITIVE_SCAN = "# Sensitive Scan\n\nNot implemented in V1 beyond manual review prompt.\n"
+DEFAULT_SENSITIVE_SCAN = "# Sensitive Scan\n\nNot implemented beyond manual review prompt.\n"
 
 
 def register(subparsers):

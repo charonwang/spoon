@@ -15,8 +15,8 @@ from .actions import (
     ActionsCorruptError,
     action_id,
     complete_action,
-    ensure_actions,
     enqueue_action,
+    ensure_actions,
     load_actions,
 )
 from .events import EventsCorruptError, append_event, load_events
@@ -29,8 +29,8 @@ from .gates import (
 from .model import (
     ActionKind,
     ActionStatus,
-    RunPhase,
     RunnerResult,
+    RunPhase,
     RunState,
     RunStatus,
     WorkflowAction,
@@ -38,7 +38,6 @@ from .model import (
     utc_now_iso,
 )
 from .state_store import load_implementation, load_run_state, save_run_state
-
 
 CURRENT = ".spoon/current"
 _MANUAL_ADAPTER = ManualAdapter()

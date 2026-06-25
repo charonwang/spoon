@@ -11,7 +11,7 @@ class IoAndPathTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "中文.md"
             write_text(path, "a\r\nb\r\n中文")
-            self.assertEqual(path.read_bytes(), "a\nb\n中文".encode("utf-8"))
+            self.assertEqual(path.read_bytes(), "a\nb\n中文".encode())
             self.assertEqual(read_text(path), "a\nb\n中文")
 
     def test_append_unique_line_writes_once_with_lf(self):

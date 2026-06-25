@@ -6,7 +6,7 @@ import shutil
 import tempfile
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from .io_util import read_text, write_json_atomic, write_text
@@ -69,7 +69,7 @@ PLAN_REVIEW_WARNING = (
 )
 
 
-class ExportSeverity(str, Enum):
+class ExportSeverity(StrEnum):
     BLOCKING = "blocking"
     WARNING = "warning"
 

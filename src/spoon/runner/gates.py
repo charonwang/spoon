@@ -3,12 +3,11 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from ..commands.board_cmd import generate_board
+from ..commands.handoff_cmd import extract_accepted_for_handoff
 from ..constants import GENERATED_END, GENERATED_START
 from ..io_util import read_text
 from ..paths import ProjectPaths
-from ..commands.board_cmd import generate_board
-from ..commands.handoff_cmd import extract_accepted_for_handoff
-
 
 SECTION_RE = re.compile(
     r"(?m)^### (?P<name>Blocking|Should Fix|Optional|Test Gaps|Needs Triage)\s*$"

@@ -1,8 +1,8 @@
 # Spoon Host Actions
 
-V2 Runner actions describe work that Python cannot complete alone. The Runner owns the queue; hosts execute actions and report completion through `spoon action complete` or `spoon action fail`.
+Runner actions describe work that Python cannot complete alone. The Runner owns the queue; hosts execute actions and report completion through `spoon action complete` or `spoon action fail`.
 
-This document is a contract for `spoon-orchestrator` and human fallback. It is not shipped behavior until V2 code lands.
+This document is the contract for `spoon-orchestrator` and human fallback when using `spoon run`.
 
 ## Rules
 

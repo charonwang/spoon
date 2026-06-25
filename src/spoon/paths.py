@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from .constants import SPOON_DIR, CURRENT_DIR, PROMPTS_DIR, REVIEWS_DIR, SNAPSHOTS_DIR
+from .constants import CURRENT_DIR, PROMPTS_DIR, REVIEWS_DIR, SNAPSHOTS_DIR, SPOON_DIR
 
 
 @dataclass(frozen=True)

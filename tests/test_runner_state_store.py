@@ -7,7 +7,12 @@ from pathlib import Path
 from spoon.commands.init_cmd import create_current_layout
 from spoon.paths import project_paths
 from spoon.runner.model import RunPhase, RunState, RunStatus
-from spoon.runner.state_store import load_implementation, load_run_state, save_implementation, save_run_state
+from spoon.runner.state_store import (
+    load_implementation,
+    load_run_state,
+    save_implementation,
+    save_run_state,
+)
 
 
 class RunnerStateStoreTests(unittest.TestCase):

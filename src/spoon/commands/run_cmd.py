@@ -9,11 +9,11 @@ from ..adapters.manual import ManualAdapter
 from ..paths import find_repo_root, project_paths
 from ..runner.engine import advance, new_run_id
 from ..runner.model import RunState
-from ..runner.state_store import load_run_state, save_run_state
+from ..runner.state_store import save_run_state
 
 
 def register(subparsers):
-    parser = subparsers.add_parser("run", help="Advance the V2 workflow runner by one phase.")
+    parser = subparsers.add_parser("run", help="Advance the workflow runner by one phase.")
     parser.add_argument("--repo", type=Path, default=Path.cwd(), help="Repository path.")
     parser.add_argument(
         "--continue",

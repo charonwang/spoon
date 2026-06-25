@@ -7,7 +7,14 @@ from pathlib import Path
 from ..io_util import read_json, read_text, write_json_atomic
 from ..paths import ProjectPaths
 from .events import append_event, load_events
-from .model import ActionKind, ActionStatus, ImplementationRecord, RunState, WorkflowAction, utc_now_iso
+from .model import (
+    ActionKind,
+    ActionStatus,
+    ImplementationRecord,
+    RunState,
+    WorkflowAction,
+    utc_now_iso,
+)
 
 
 class ActionsCorruptError(Exception):

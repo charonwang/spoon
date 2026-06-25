@@ -2,7 +2,7 @@
 
 `spoon export-github` produces a redacted candidate directory that a human may review and commit elsewhere. It never pushes to GitHub and never exports raw workflow evidence.
 
-This document is the contract for V2D.
+This document is the export policy contract for `spoon export-github`.
 
 ## Output Shape
 
@@ -50,7 +50,7 @@ The scanner is deterministic. It does not claim to detect every secret or busine
 
 ## Local Path Rewrite
 
-Before scanning, exported Markdown is rewritten with V1 `path_policy`.
+Before scanning, exported Markdown is rewritten with `path_policy`.
 
 | Source | Export |
 | --- | --- |
@@ -61,7 +61,7 @@ Before scanning, exported Markdown is rewritten with V1 `path_policy`.
 
 After rewrite, any remaining local path token is blocking.
 
-Line anchors are required. Whole-file `file:///...` links without `#Lnn` remain invalid in V1/V2 because Cursor jump behavior is less consistent.
+Line anchors are required. Whole-file `file:///...` links without `#Lnn` remain invalid because Cursor jump behavior is less consistent.
 
 ## `snapshot-summary.json`
 

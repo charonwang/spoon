@@ -7,9 +7,9 @@ from unittest.mock import patch
 
 from spoon.adapters.base import AdapterRequest, AdapterStatus
 from spoon.adapters.claude_cli import (
+    FORBIDDEN_FLAGS,
     ClaudeCapabilities,
     ClaudeCliAdapter,
-    FORBIDDEN_FLAGS,
     _parse_json_text,
     _validate_review_payload,
     render_claude_review,
@@ -18,7 +18,6 @@ from spoon.commands.init_cmd import create_current_layout
 from spoon.io_util import read_text, write_text
 from spoon.paths import project_paths
 from spoon.review_parser import classify_review_text
-
 
 VALID_PAYLOAD = {
     "verdict": "approved",

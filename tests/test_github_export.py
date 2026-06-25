@@ -1,6 +1,5 @@
 import errno
 import json
-import re
 import subprocess
 import sys
 import tempfile

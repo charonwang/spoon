@@ -1,12 +1,10 @@
-# Spoon V2 Architecture
+# Spoon Architecture
 
-V2 adds an orchestration layer on top of V1 file commands. This document is the design contract for implementers; it does not describe shipped behavior until V2 code is released.
-
-Companion contracts:
+Design contract for the Spoon orchestration layer and file workflow. Companion contracts:
 
 - [Host actions](host-actions.md)
 - [GitHub export policy](export-policy.md)
-- [Implementation plan](plans/v2-orchestrator-plan.md)
+- [Implementation plan (historical)](plans/v2-orchestrator-plan.md)
 
 ## Design principles
 
@@ -33,10 +31,10 @@ Companion contracts:
               ┌──────────────────────────────────┼──────────────────────────┐
               ▼                                  ▼                          ▼
      ┌─────────────────┐               ┌─────────────────┐        ┌─────────────────┐
-     │ V1 commands     │               │ Adapters        │        │ .spoon/current/ │
+     │ File commands   │               │ Adapters        │        │ .spoon/current/ │
      │ snapshot        │               │ claude_cli      │        │ brief plan board  │
      │ prompts board   │               │ manual          │        │ handoff reviews   │
-     │ handoff archive │               └─────────────────┘        │ snapshots + V2 JSON│
+     │ handoff archive │               └─────────────────┘        │ snapshots + JSON  │
      └─────────────────┘                                            └─────────────────┘
 ```
 
@@ -58,13 +56,13 @@ brief
 
 `implementation.json` with `status: reported_complete` only means the implementation **host action** finished and a snapshot was refreshed — not that the user accepted the code.
 
-## Local layout (V2 additions)
+## Local layout
 
 ```text
 .spoon/
   config.json                    # local only; experimental_cursor_ui (default false)
   current/
-    …                            # V1 files unchanged
+    brief.md plan.md …           # workflow Markdown and snapshots
     run-state.json               # phase, status, pending_decision
     actions.json                 # pending / completed workflow actions
     events.jsonl                 # append-only audit log
@@ -117,17 +115,7 @@ Append-only records: phase changes, action enqueued/completed/failed, queue rebu
 
 ### ImplementationRecord (`implementation.json`)
 
-This file is written only after an implementation action completes.
-
-| Field | Role |
-| --- | --- |
-| `schema_version` | Starts at `1` |
-| `status` | Always `reported_complete` |
-| `action_id` | Completed implementation action |
-| `completed_at` | ISO-8601 timestamp |
-| `summary_path` | Implementation summary output |
-
-It is a host-completion marker, not a code-acceptance decision.
+Written only after an implementation action completes. Host-completion marker, not a code-acceptance decision.
 
 ## Adapters
 
@@ -138,7 +126,7 @@ Adapter.execute(request) → AdapterResult
   action: WorkflowAction | None   # e.g. manual fallback
 ```
 
-- **Claude CLI** — subprocess, no shell, structured JSON verdict rendered to neutral Markdown under `reviews/`. On `FileNotFoundError`, auth failure, or timeout → `unavailable` → engine emits manual action (exit `20`).
+- **Claude CLI** — subprocess, no shell, structured JSON verdict rendered to neutral Markdown under `reviews/`. On failure → `unavailable` → engine emits manual action (exit `20`).
 - **Manual** — always `needs_host` with exact `spoon action complete` instructions.
 
 ## Decision gates
@@ -165,29 +153,23 @@ The Skill holds **no state**. It only:
 5. On ambiguity — `spoon action fail` and stop
 6. Repeat
 
-Host rules (see Skill `references/action-kinds.md` when added):
+Host rules: see Skill `references/action-kinds.md` and [host-actions.md](host-actions.md).
 
-- **Codex** — only existing thread tools; never auto-create threads
-- **Cursor Plan UI** — manual by default; experimental mode requires workspace + Plan Mode confirmation
-- **Cursor Agent UI** — requires approved `handoff.md`; completes implementation action only; does not auto-approve plans
+## Runner exit codes
 
-Detailed action contracts are in [host-actions.md](host-actions.md).
+| Code | Meaning |
+| --- | --- |
+| `0` | Stable; no pending host actions or user decisions |
+| `10` | User decision required |
+| `11` | Pending host action |
+| `20` | Adapter unavailable; manual action generated |
+| `21` | Runner failure; persisted phase unchanged |
 
 ## GitHub export (`spoon export-github`)
 
 Produces a **candidate** tree under `<destination>/tasks/<project>/<task>/` for human review before any Git push.
 
-**Allowlist:** `brief.md`, `plan.md`, `review-board.md`, `handoff.md`, `index.json`, `snapshot-summary.json`, `export-report.md`
-
-**Blocked:** raw snapshots, diffs, test output, transcripts, `session_id` / `thread_id`, long code fences (>60 lines), unresolved local paths.
-
-Local `file:///…` links are rewritten to `repo://<alias>/<relative>#L<n>` using V1 `path_policy`. Blocking findings prevent creating the final directory; warnings are recorded in `export-report.md`.
-
-`snapshot-summary.json` contains counts and pass/fail enums only — no file names, diffs, or paths. `raw_snapshots_exported` is always `false`.
-
-Optional `github/history-template/` supplies CI to validate a separate **spoon-history** repository.
-
-Full export rules are in [export-policy.md](export-policy.md).
+Full rules: [export-policy.md](export-policy.md). Optional `github/history-template/` validates a separate **spoon-history** repository.
 
 ## Repository boundaries
 
@@ -197,11 +179,9 @@ Full export rules are in [export-policy.md](export-policy.md).
 | Optional **spoon-history** | Human-approved redacted exports |
 | Your business Git host | Application code, real diffs, CI/CD |
 
-GitHub Issues/Projects may mirror tasks; they are not workflow truth.
+## Stable file-command API
 
-## V1 API preserved
-
-V2 must keep calling these Python entry points (names in `spoon.commands.*`):
+The Runner calls these Python entry points (`spoon.commands.*`):
 
 - `create_snapshot`
 - `generate_prompts`
@@ -216,10 +196,9 @@ V2 must keep calling these Python entry points (names in `spoon.commands.*`):
 - Corrupt `actions.json` → exit `21`, do not treat as empty queue
 - Missing `actions.json` → rebuild from phase + deterministic ids + event log
 - Completed action recovery requires matching `action_completed` event, current output file, and output digest
-- Completed action output deleted or digest mismatch → recover action as pending
 
 ## Security notes
 
-- Action `complete` resolves output paths inside the repo; rejects traversal and paths outside `.spoon/current/` where required
+- Action `complete` resolves output paths inside the repo; rejects traversal
 - External CLI invocations: argument array, no shell, no permission-skipping flags
 - Export scanner is deterministic, not a guarantee against all secrets — human review required

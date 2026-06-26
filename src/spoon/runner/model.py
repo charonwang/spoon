@@ -42,7 +42,10 @@ class ActionStatus(StrEnum):
 
 
 def utc_now_iso() -> str:
-    return datetime.now(UTC).replace(microsecond=0).isoformat()
+    # Microsecond precision (fixed 6 digits) keeps timestamps orderable: the
+    # Runner compares snapshot vs. completion times with `>`, and second-level
+    # resolution makes those collide on fast machines (see has_fresh_snapshot).
+    return datetime.now(UTC).isoformat(timespec="microseconds")
 
 
 @dataclass(frozen=True)

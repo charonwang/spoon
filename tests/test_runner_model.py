@@ -1,3 +1,4 @@
+import re
 import unittest
 
 from spoon.runner.model import (
@@ -8,10 +9,18 @@ from spoon.runner.model import (
     RunState,
     RunStatus,
     WorkflowAction,
+    utc_now_iso,
 )
 
 
 class RunnerModelTests(unittest.TestCase):
+    def test_timestamp_has_subsecond_precision(self):
+        # Snapshot-vs-completion freshness is compared with `>`; second-level
+        # resolution collides on fast machines and stalls the Runner. Keep
+        # fixed 6-digit microseconds so timestamps stay orderable.
+        stamp = utc_now_iso()
+        self.assertRegex(stamp, re.compile(r"T\d\d:\d\d:\d\d\.\d{6}\+00:00$"))
+
     def test_enum_round_trip(self):
         self.assertEqual(RunPhase("plan_review"), RunPhase.PLAN_REVIEW)
         self.assertEqual(RunStatus("needs_host"), RunStatus.NEEDS_HOST)

@@ -65,6 +65,8 @@ python -m spoon init
 
 ## Pre-commit checklist
 
+CI is the source of truth; local Windows passing is not green. The ubuntu matrix runs much faster and catches timing races that a slow Windows run hides.
+
 - [ ] `ruff check .` is clean
 - [ ] Full test suite passes
 - [ ] New functionality has matching tests (`tests/test_<module>.py`)

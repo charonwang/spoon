@@ -37,3 +37,8 @@
 - `spoon run` advances at most one phase per call; don't expect a single invocation to run the full pipeline
 - After implementation completes, Runner auto-snapshots; if snapshot fails, it stalls at `needs_host`
 - Don't manually run `spoon snapshot` mid-Runner-flow — let the Runner manage snapshot timing
+
+## Timestamps and determinism
+
+- `utc_now_iso()` is microsecond-precision on purpose. `has_fresh_snapshot` compares snapshot vs. completion times with `>`; second-level resolution makes them collide on fast machines and stalls the Runner before `code_review`. Never truncate to seconds.
+- Tests must be deterministic: no dependence on wall-clock resolution, execution speed, or OS. A timing race can pass on slow Windows and fail only on a fast ubuntu CI runner.

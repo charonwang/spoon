@@ -8,7 +8,7 @@ Python 3.11+ CLI for coordinating Cursor, Codex, and Claude Code across plan →
 Developer / spoon-orchestrator Skill
   │  spoon run / spoon action
   ▼
-CLI (argparse) ──┬── File commands (init/snapshot/prompts/board/handoff/archive/export)
+CLI (argparse) ──┬── File commands (init/adopt-plan/snapshot/prompts/board/handoff/archive/export-github)
                   │
                   └── Runner engine (spoon run)
                         │  run-state.json / actions.json / events.jsonl

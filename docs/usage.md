@@ -12,11 +12,60 @@ You, Cursor, Codex, and Claude Code read the same files. For automated phase adv
 
 ## One-Time Install
 
-Use **Python 3.11+ with pip**. On Windows, prefer the `py` launcher so you do not pick a `python` without pip.
+Spoon requires **Python 3.11+**. Python 3.12+ no longer bundles pip — use `venv` (which includes pip) or bootstrap with `ensurepip`.
 
 > Examples use Windows PowerShell. On macOS/Linux, replace `\` path separators with `/` and use `.venv/bin/python` instead of `.venv\Scripts\python.exe`.
 
-List installed interpreters, then verify the launcher tag works:
+### With venv (recommended)
+
+```powershell
+cd <spoon-checkout>
+python -m venv .venv
+.venv\Scripts\python -m pip install -e .
+.venv\Scripts\python -m spoon --help
+```
+
+To use `spoon` directly without the full path, activate the venv:
+
+```powershell
+.venv\Scripts\activate
+spoon --help
+```
+
+### With uv
+
+```powershell
+cd <spoon-checkout>
+uv venv --python ">=3.11"
+uv pip install -e .
+.\.venv\Scripts\python.exe -m spoon --help
+```
+
+### Global install with uv (no venv, runs from any directory)
+
+`uv tool install` exposes `spoon` on your PATH (for example `~/.local/bin`), so you can run it from any business repository without activating a venv:
+
+```powershell
+uv tool install -e <spoon-checkout>                     # editable: tracks your source
+uv tool install <spoon-checkout>\dist\spoon-0.2.0-py3-none-any.whl  # or from a built wheel
+spoon --help
+```
+
+The editable form keeps the command bound to your checkout — if you move or delete the source directory, reinstall from the new path. Manage the tool with `uv tool list`, `uv tool upgrade spoon`, and `uv tool uninstall spoon`. If `uv` is not installed, run `irm https://astral.sh/uv/install.ps1 | iex` and restart the terminal first.
+
+### If pip is missing (Python 3.12+)
+
+`ensurepip` is a built-in module that bootstraps pip:
+
+```powershell
+python -m ensurepip --upgrade
+python -m pip install -e .
+spoon --help
+```
+
+### With the py launcher (Windows)
+
+List installed interpreters, then pick any version `py -0p` reports as 3.11 or newer. The `py` launcher needs an exact tag such as `-3.11` or `-3.12` — it does not accept a range like `>=3.11`, so the `3.11` below is just an example:
 
 ```powershell
 py -0p
@@ -31,41 +80,14 @@ py -3.11 -m pip install -e .
 spoon --help
 ```
 
-If `py -0p` lists 3.11 but `py -3.11 --version` fails, use the uv path below instead.
-
-If `pip` is missing on the interpreter you chose:
+If `py -3.11` is available but pip is missing:
 
 ```powershell
 py -3.11 -m ensurepip --upgrade
 py -3.11 -m pip install -e .
 ```
 
-With [uv](https://docs.astral.sh/uv/) (recommended when `py -3.11 --version` fails):
-
-```powershell
-cd <spoon-checkout>
-uv venv --python 3.11
-uv pip install -e .
-.\.venv\Scripts\activate
-spoon --help
-```
-
-Without activating the venv:
-
-```powershell
-.\.venv\Scripts\python.exe -m spoon --help
-```
-
-If your default `python` already has pip:
-
-```powershell
-python -m pip install -e .
-spoon --help
-```
-
-If `spoon` is not on your `PATH`, use `python -m spoon` instead.
-
-After moving or cloning Spoon to a new path, reinstall with the same interpreter you used initially (for example `py -3.11 -m pip install -e .` or `uv pip install -e .` in the existing `.venv`).
+After moving or cloning Spoon to a new path, reinstall with the same interpreter you used initially (for example `.venv\Scripts\python -m pip install -e .` or `uv pip install -e .` in the existing `.venv`).
 
 ## Initialize a Business Repository
 

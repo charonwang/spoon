@@ -2,39 +2,50 @@
 
 ## Install (dev mode)
 
-Windows, py launcher:
+venv (recommended):
 ```powershell
-py -3.11 -m pip install -e ".[dev]"
+python -m venv .venv
+.venv\Scripts\python -m pip install -e ".[dev]"
 ```
 
 uv:
 ```powershell
-uv venv --python 3.11
+uv venv --python ">=3.11"
 uv pip install -e ".[dev]"
+```
+
+If pip is missing (Python 3.12+), bootstrap it first:
+```powershell
+python -m ensurepip --upgrade
+```
+
+py launcher (Windows; use any installed 3.11+ tag — the launcher needs an exact `-3.x`, not a range):
+```powershell
+py -3.11 -m pip install -e ".[dev]"
 ```
 
 ## Run tests
 
 All:
 ```powershell
-py -3.11 -m unittest discover -s tests -p "test_*.py"
+.venv\Scripts\python -m unittest discover -s tests -p "test_*.py"
 ```
 
 Single file:
 ```powershell
-py -3.11 -m unittest tests.test_runner_engine
+.venv\Scripts\python -m unittest tests.test_runner_engine
 ```
 
 Single case:
 ```powershell
-py -3.11 -m unittest tests.test_runner_engine.TestAdvance.test_brief_phase
+.venv\Scripts\python -m unittest tests.test_runner_engine.RunnerEngineTests.test_brief_advances_to_plan_adoption
 ```
 
 ## Lint
 
 ```powershell
-py -3.11 -m ruff check .
-py -3.11 -m ruff check . --fix
+.venv\Scripts\python -m ruff check .
+.venv\Scripts\python -m ruff check . --fix
 ```
 
 Config lives in `pyproject.toml` (`[tool.ruff]`): line length 120, rules `E/F/I/UP/B`, `templates.py` exempt from `E501`. CI runs `ruff check .` as a gate.
@@ -42,7 +53,7 @@ Config lives in `pyproject.toml` (`[tool.ruff]`): line length 120, rules `E/F/I/
 ## Doc link check
 
 ```powershell
-py -3.11 scripts/check_doc_links.py
+.venv\Scripts\python scripts/check_doc_links.py
 ```
 
 ## Run without installing

@@ -22,25 +22,56 @@ Spoon is intentionally local-first and conservative:
 
 ## Install
 
-Spoon requires **Python 3.11+ with pip**. Editable install (any platform where `python` already has pip):
+Spoon requires **Python 3.11+** (Python 3.12+ no longer bundles pip; use `ensurepip` or a virtual environment).
+
+### With venv (recommended)
+
+```powershell
+cd <spoon-checkout>
+python -m venv .venv
+.venv\Scripts\python -m pip install -e .
+.venv\Scripts\python -m spoon --help
+```
+
+### With uv
+
+```powershell
+cd <spoon-checkout>
+uv venv --python ">=3.11"
+uv pip install -e .
+.\.venv\Scripts\python.exe -m spoon --help
+```
+
+### Global install with uv (recommended for daily use)
+
+`uv tool install` puts `spoon` on your PATH (for example `~/.local/bin`) so it works from any directory without activating a venv:
+
+```powershell
+uv tool install -e <spoon-checkout>                     # editable: tracks your source
+uv tool install <spoon-checkout>\dist\spoon-0.2.0-py3-none-any.whl  # or from a built wheel
+spoon --help
+```
+
+Manage it later with `uv tool list`, `uv tool upgrade spoon`, and `uv tool uninstall spoon`. If `uv` is missing, install it with `irm https://astral.sh/uv/install.ps1 | iex`, then restart the terminal.
+
+### If your Python already has pip
 
 ```powershell
 cd <spoon-checkout>
 python -m pip install -e .
 spoon --help
-spoon init
 ```
 
-With [uv](https://docs.astral.sh/uv/):
+### If pip is missing (Python 3.12+)
 
 ```powershell
 cd <spoon-checkout>
-uv venv --python 3.11
-uv pip install -e .
-.\.venv\Scripts\python.exe -m spoon --help
+python -m ensurepip --upgrade
+python -m pip install -e .
+spoon --help
 ```
 
-On Windows the default `python` may be a build without pip (for example 3.14 from the Microsoft Store). For picking an explicit interpreter via the `py` launcher, `ensurepip`, and other install variants, see the [usage guide](docs/usage.md).
+More variants (py launcher, uv, PATH issues): see the [usage guide](docs/usage.md).
 
 ## Documentation
 
@@ -132,22 +163,26 @@ Avoid raw Windows paths such as `C:\path\to\file.go:82`.
 
 ## Development
 
-When `py -3.11 --version` works:
+With venv (recommended):
 
 ```powershell
-py -3.11 -m pip install -e ".[dev]"
-py -3.11 -m unittest discover -s tests -p "test_*.py"
-py -3.11 scripts/check_doc_links.py
+cd <spoon-checkout>
+python -m venv .venv
+.venv\Scripts\python -m pip install -e ".[dev]"
+.venv\Scripts\python -m unittest discover -s tests -p "test_*.py"
+.venv\Scripts\python scripts/check_doc_links.py
 ```
 
-When you installed with uv (or `py -3.11` does not work):
+With uv:
 
 ```powershell
-uv venv --python 3.11
+uv venv --python ">=3.11"
 uv pip install -e ".[dev]"
 .\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py"
 .\.venv\Scripts\python.exe scripts/check_doc_links.py
 ```
+
+If pip is missing (Python 3.12+), bootstrap it first: `python -m ensurepip --upgrade`
 
 ## License
 

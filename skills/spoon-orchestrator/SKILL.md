@@ -13,9 +13,11 @@ holds **no state** and never edits `.spoon/` JSON files directly.
 
 ## Hard rules
 
-- Run only `spoon run`, `spoon action list`, `spoon action complete`, and
-  `spoon action fail`. Do not edit `actions.json`, `run-state.json`, or
-  `events.jsonl` by hand.
+- Mutate Runner state **only** through `spoon run`, `spoon action list`,
+  `spoon action complete`, and `spoon action fail`. Do not edit `actions.json`,
+  `run-state.json`, or `events.jsonl` by hand. (Reading prompt files, writing
+  declared `output_path` files, and calling Codex/Cursor host tools to execute
+  an action are expected — see "Host action execution" below.)
 - Do not rewrite human `Decisions` in `review-board.md`.
 - Do not stage, commit, push, create GitHub Issues, or update Projects.
 - Do not use Superpowers or other external workflow frameworks.

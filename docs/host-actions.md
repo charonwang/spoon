@@ -9,7 +9,7 @@ This document is the contract for `spoon-orchestrator` and human fallback when u
 - The Runner is the only state owner. Host tools must not edit `actions.json` directly.
 - Host actions must not rewrite `review-board.md` decisions.
 - Host actions must not stage, commit, push, create GitHub Issues, or update Projects.
-- Unknown, ambiguous, unavailable, or unsafe host actions become `manual`.
+- The Runner may enqueue a `manual` fallback action itself (for example when an adapter is unavailable — exit code `20`). The host Skill must not invent fallback actions: on an unknown, ambiguous, unavailable, or unsafe action it runs `spoon action fail` and stops.
 - Cursor UI automation is disabled unless `.spoon/config.json` contains `"experimental_cursor_ui": true`.
 
 ## Action Fields
@@ -48,7 +48,7 @@ Executed by the host Skill when thread tools are available.
 - Do not create a new thread automatically.
 - Send a short instruction plus file paths, not full plan/review bodies.
 - Save the reply to the declared `output_path`.
-- If multiple threads match or the tool is unavailable, create or keep a `manual` action.
+- If multiple threads match or the tool is unavailable, run `spoon action fail` and stop. Do not create a `manual` action — only the Runner enqueues fallbacks.
 
 ### `cursor_plan_ui`
 
@@ -59,7 +59,7 @@ Manual by default. Experimental automation may run only when all are true:
 - Cursor is visibly in Plan Mode.
 - The action does not approve a plan on behalf of the user.
 
-If any UI check is unclear, fail or downgrade to manual.
+If any UI check is unclear, run `spoon action fail` and stop. Do not downgrade to a `manual` action — only the Runner enqueues fallbacks.
 
 ### `cursor_agent_ui`
 

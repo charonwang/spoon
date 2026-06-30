@@ -8,6 +8,27 @@ from unittest.mock import patch
 from spoon.commands import snapshot_cmd
 from spoon.commands.init_cmd import create_current_layout
 from spoon.commands.snapshot_cmd import create_snapshot, git_text
+from spoon.git_util import current_head_or_empty
+from spoon.paths import project_paths
+
+
+def git_commit(repo: Path, message: str) -> None:
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=Spoon Test",
+            "-c",
+            "user.email=spoon@example.com",
+            "commit",
+            "-m",
+            message,
+        ],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
 
 
 class SnapshotCommandTests(unittest.TestCase):
@@ -55,6 +76,50 @@ class SnapshotCommandTests(unittest.TestCase):
             self.assertIn("## Untracked Files", diff)
             self.assertIn("+++ b/new_feature.py", diff)
             self.assertIn("+print('new')", diff)
+
+    def test_snapshot_includes_committed_diff_since_implementation_base(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            create_current_layout(repo)
+            paths = project_paths(repo)
+            (repo / "app.txt").write_text("before\n", encoding="utf-8")
+            git_commit(repo, "initial")
+            paths.implementation_base.write_text(current_head_or_empty(repo) + "\n", encoding="utf-8")
+
+            (repo / "app.txt").write_text("before\nafter checkpoint\n", encoding="utf-8")
+            git_commit(repo, "checkpoint")
+
+            create_snapshot(repo, test_cmd=None, dependency_cmd=None)
+
+            snapshots = repo / ".spoon" / "current" / "snapshots"
+            stat = (snapshots / "diff-stat.txt").read_text(encoding="utf-8")
+            diff = (snapshots / "diff.patch").read_text(encoding="utf-8")
+            self.assertIn("Committed Since Implementation Base Diff Stat", stat)
+            self.assertIn("app.txt", stat)
+            self.assertIn("Committed Since Implementation Base", diff)
+            self.assertIn("+after checkpoint", diff)
+
+    def test_snapshot_falls_back_to_base_file_when_implementation_json_is_corrupt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            create_current_layout(repo)
+            paths = project_paths(repo)
+            (repo / "app.txt").write_text("before\n", encoding="utf-8")
+            git_commit(repo, "initial")
+            paths.implementation_base.write_text(current_head_or_empty(repo) + "\n", encoding="utf-8")
+            paths.implementation.write_text("{bad", encoding="utf-8")
+
+            (repo / "app.txt").write_text("before\nafter checkpoint\n", encoding="utf-8")
+            git_commit(repo, "checkpoint")
+
+            create_snapshot(repo, test_cmd=None, dependency_cmd=None)
+
+            diff = (paths.snapshots / "diff.patch").read_text(encoding="utf-8")
+            self.assertIn("Implementation Base Warning", diff)
+            self.assertIn("implementation.json was invalid and was skipped", diff)
+            self.assertIn("+after checkpoint", diff)
 
     def test_snapshot_reports_ls_files_failure_in_untracked_sections(self):
         with tempfile.TemporaryDirectory() as tmp:

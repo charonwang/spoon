@@ -7,11 +7,13 @@ from spoon.adapters.base import AdapterRequest, AdapterResult, AdapterStatus
 from spoon.commands.adopt_plan_cmd import adopt_plan
 from spoon.commands.init_cmd import create_current_layout
 from spoon.constants import GENERATED_END, GENERATED_START
+from spoon.git_util import current_head_or_empty
 from spoon.io_util import write_text
 from spoon.paths import project_paths
 from spoon.runner.actions import fail_action
-from spoon.runner.engine import advance
-from spoon.runner.model import ActionKind, RunPhase, RunStatus
+from spoon.runner.engine import advance, expected_actions
+from spoon.runner.model import ActionKind, RunPhase, RunState, RunStatus, utc_now_iso
+from spoon.runner.state_store import save_run_state
 
 
 class FakeClaudeAdapter:
@@ -136,6 +138,47 @@ class RunnerEngineTests(unittest.TestCase):
         self.assertEqual(stopped.exit_code, 21)
         self.assertEqual(stopped.state.phase, RunPhase.PLAN_REVIEW)
         self.assertEqual(stopped.state.status, RunStatus.FAILED)
+
+    def test_plan_decision_records_implementation_base(self):
+        save_run_state(
+            self.paths,
+            RunState(
+                schema_version=1,
+                run_id="run-test",
+                phase=RunPhase.PLAN_DECISION,
+                status=RunStatus.READY,
+                pending_decision=None,
+                last_error=None,
+                updated_at=utc_now_iso(),
+            ),
+        )
+        for name in ("codex-plan.md", "claude-plan.md", "final-plan-review.md"):
+            write_text(self.paths.reviews / name, "## Verdict\n\napproved\n")
+        write_text(self.paths.review_board, approved_board())
+
+        result = advance(self.repo, self.adapters)
+
+        self.assertEqual(result.state.phase, RunPhase.IMPLEMENTATION)
+        self.assertEqual(
+            self.paths.implementation_base.read_text(encoding="utf-8").strip(),
+            current_head_or_empty(self.repo),
+        )
+
+    def test_expected_implementation_action_reads_base_without_writing_it(self):
+        state = RunState(
+            schema_version=1,
+            run_id="run-test",
+            phase=RunPhase.IMPLEMENTATION,
+            status=RunStatus.READY,
+            pending_decision=None,
+            last_error=None,
+            updated_at=utc_now_iso(),
+        )
+
+        actions = expected_actions(state, self.repo)
+
+        self.assertFalse(self.paths.implementation_base.exists())
+        self.assertEqual(actions[0].payload["implementation_base_sha"], current_head_or_empty(self.repo))
 
 
 if __name__ == "__main__":

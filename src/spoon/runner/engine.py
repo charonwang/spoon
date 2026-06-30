@@ -9,7 +9,8 @@ from ..adapters.manual import ManualAdapter
 from ..commands.handoff_cmd import extract_accepted_for_handoff, generate_handoff
 from ..commands.prompts_cmd import generate_prompts
 from ..commands.snapshot_cmd import create_snapshot
-from ..io_util import read_text
+from ..git_util import current_head_or_empty
+from ..io_util import read_text, write_text
 from ..paths import ProjectPaths, project_paths
 from .actions import (
     ActionsCorruptError,
@@ -97,6 +98,27 @@ def make_action(
     )
 
 
+def ensure_implementation_base(paths: ProjectPaths) -> str:
+    if paths.implementation_base.exists():
+        existing = read_text(paths.implementation_base).strip()
+        if existing:
+            return existing
+    base_sha = current_head_or_empty(paths.repo)
+    write_text(paths.implementation_base, base_sha + "\n")
+    append_event(paths, "implementation_base_recorded", {"base_sha": base_sha})
+    return base_sha
+
+
+def read_implementation_base_for_action(paths: ProjectPaths) -> str:
+    if paths.implementation_base.exists():
+        existing = read_text(paths.implementation_base).strip()
+        if existing:
+            return existing
+    # Recovery fallback: if local .spoon state was deleted, keep the action usable.
+    # Earlier checkpoint commits may not be included in later base..HEAD snapshots.
+    return current_head_or_empty(paths.repo)
+
+
 def expected_actions(state: RunState, repo: Path) -> list[WorkflowAction]:
     if state.phase == RunPhase.PLAN_ADOPTION:
         kind, prompt, output = PLAN_ADOPTION_SPEC
@@ -108,7 +130,23 @@ def expected_actions(state: RunState, repo: Path) -> list[WorkflowAction]:
         ]
     if state.phase == RunPhase.IMPLEMENTATION:
         kind, prompt, output = IMPLEMENTATION_SPEC
-        return [make_action(state, repo, kind, prompt, output)]
+        action = make_action(state, repo, kind, prompt, output)
+        paths = project_paths(repo)
+        base_sha = read_implementation_base_for_action(paths)
+        return [
+            WorkflowAction(
+                id=action.id,
+                kind=action.kind,
+                status=action.status,
+                prompt_path=action.prompt_path,
+                output_path=action.output_path,
+                working_directory=action.working_directory,
+                payload={**action.payload, "implementation_base_sha": base_sha},
+                attempts=action.attempts,
+                created_at=action.created_at,
+                updated_at=action.updated_at,
+            )
+        ]
     if state.phase == RunPhase.CODE_REVIEW:
         return [
             make_action(state, repo, kind, prompt, output)
@@ -400,6 +438,7 @@ def _advance_one(
             )
             save_run_state(paths, updated)
             return RunnerResult(10, updated, tuple())
+        ensure_implementation_base(paths)
         generate_handoff(paths.repo)
         updated = save_phase(paths, state, RunPhase.IMPLEMENTATION, RunStatus.READY)
         return RunnerResult(0, updated, tuple())

@@ -1,14 +1,14 @@
 ---
 name: spoon-orchestrator
 description: >-
-  Loop on `spoon run --json` to execute Spoon V2 host actions and pause for
+  Loop on `spoon run --json` to execute Spoon Runner host actions and pause for
   human decisions. Use when advancing a Spoon workflow, when exit code is 11 or
   20, or when the user asks to run the Spoon orchestrator.
 ---
 
 # Spoon Orchestrator
 
-Portable host loop for Spoon V2. The Runner owns all workflow state; this Skill
+Portable host loop for Spoon Runner workflows. The Runner owns all workflow state; this Skill
 holds **no state** and never edits `.spoon/` JSON files directly.
 
 ## Hard rules
@@ -20,6 +20,9 @@ holds **no state** and never edits `.spoon/` JSON files directly.
   an action are expected — see "Host action execution" below.)
 - Do not rewrite human `Decisions` in `review-board.md`.
 - Do not stage, commit, push, create GitHub Issues, or update Projects.
+- This Git rule applies to the host loop itself. If an implementation prompt allows a coding
+  agent to create a local checkpoint commit after relevant verification passes, do not run Git
+  commands on that agent's behalf.
 - Do not use Superpowers or other external workflow frameworks.
 - Cursor Plan/Agent UI automation is **off by default**. Run it only when
   `.spoon/config.json` contains `"experimental_cursor_ui": true` and every

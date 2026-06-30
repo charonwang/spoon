@@ -1,1 +1,1 @@
-"""Spoon V2 workflow adapters."""
+"""Spoon workflow adapters."""

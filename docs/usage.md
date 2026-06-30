@@ -4,6 +4,11 @@ Spoon is a **local file workflow CLI**. It maintains Markdown and snapshot files
 
 You, Cursor, Codex, and Claude Code read the same files. For automated phase advancement, use `spoon run` and the `spoon-orchestrator` Skill (see [architecture](architecture.md) and [host actions](host-actions.md)).
 
+Generated implementation prompts may allow your coding agent to create a local checkpoint commit
+after a completed approved item or review-fix batch passes relevant verification. Spoon and its host
+actions still do not stage, commit, or push; checkpoint commits are local coding-agent recovery
+points and must not be pushed unless you explicitly ask.
+
 ## Requirements
 
 - Python 3.11 or newer
@@ -156,6 +161,10 @@ spoon snapshot --test-cmd "python -m unittest discover -s tests -p \"test_*.py\"
 
 Re-run `snapshot` after code or test changes. Each run overwrites the snapshot files. Writes are sequential, not transactional; rerun if interrupted.
 
+When `.spoon/current/implementation-base.txt` exists, `diff-stat.txt` and `diff.patch` also include
+committed checkpoint changes from that base to `HEAD`, so code review and final check can inspect
+local checkpoint commits as well as unstaged, staged, and untracked files.
+
 ### 4. Generate review prompts
 
 ```powershell
@@ -185,6 +194,12 @@ spoon handoff
 Creates `.spoon/current/handoff.md` from accepted board items.
 
 ### 8. After implementation — review again
+
+During implementation, the coding agent may check existing `plan.md` checkbox items that directly
+match completed approved work. It must not add checklist items, rewrite the plan, or record review
+history in `plan.md`. After the relevant verification for a completed approved item or review-fix
+batch passes, it may create a local checkpoint commit. Squashing or keeping those commits is a
+human or final-phase decision, not an implementation-agent task.
 
 ```powershell
 spoon snapshot --test-cmd "..."
@@ -246,7 +261,8 @@ This table is the canonical command list; other docs link here instead of repeat
 - Read private chat logs or editor internals
 - Auto-accept or auto-reject review findings
 
-Final review judgment and Git operations remain yours.
+Final review judgment and Git operations remain yours. Generated implementation prompts can permit
+coding-agent local checkpoint commits, but Spoon itself still does not perform Git writes.
 
 ## Related Docs
 

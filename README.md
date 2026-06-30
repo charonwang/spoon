@@ -15,6 +15,10 @@ Spoon is intentionally local-first and conservative:
 - It writes neutral Markdown, text, and JSON files that other tools can inspect.
 - It assumes trusted local command input for `--test-cmd` and `--dependency-cmd`.
 
+Generated implementation prompts may allow a coding agent to create a local checkpoint commit
+after a completed approved item or review-fix batch passes relevant verification. That is the
+coding agent's Git operation, not a Spoon CLI or host-action operation, and it must not push.
+
 ## Requirements
 
 - Python 3.11 or newer
@@ -122,6 +126,8 @@ spoon archive --archive-root "C:\path\to\archives" --project my-project --task m
 6. Run `spoon board` to summarize existing review files into `.spoon/current/review-board.md`.
 7. Move accepted findings into the board's `Accepted For Handoff` section.
 8. Run `spoon handoff` and give `.spoon/current/handoff.md` plus the plan to your coding agent.
+   The coding agent may check matching existing plan checkboxes and create local checkpoint commits
+   only after relevant verification passes.
 9. Optionally use `spoon run` and `spoon action` to advance phases with host-tool help.
 10. Run `spoon archive` when the task is complete.
 
@@ -134,6 +140,7 @@ spoon archive --archive-root "C:\path\to\archives" --project my-project --task m
   review-board.md       # Human decisions plus generated review summary
   handoff.md            # Accepted changes for the implementation agent
   metadata.json         # Local workflow metadata
+  implementation-base.txt # Git base SHA for implementation checkpoint review
   prompts/              # Reusable prompts for plan/code review and final checks
   reviews/              # Raw review notes from Cursor, Codex, Claude Code, etc.
   snapshots/            # Git status, diffs, command output, and related evidence
@@ -147,7 +154,7 @@ Spoon adds `.spoon/` to `.git/info/exclude` for the repository you run it in.
 ## Snapshot Notes
 
 - `snapshots/status.txt` is the source for file state, including `??` untracked files.
-- `snapshots/diff-stat.txt` and `snapshots/diff.patch` are split into unstaged, staged, and untracked sections.
+- `snapshots/diff-stat.txt` and `snapshots/diff.patch` include checkpoint commits since `implementation-base.txt` when present, then unstaged, staged, and untracked sections.
 - Untracked regular UTF-8 files up to 200 KB are included in `diff.patch`; binary, non-UTF-8, directory, or larger files are listed with a skip note.
 - If `.spoon/current/metadata.json` is corrupt, `snapshot` rebuilds it and records `metadata_warning`.
 

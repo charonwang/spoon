@@ -4,6 +4,7 @@ import json
 from argparse import Namespace
 from pathlib import Path
 
+from ..io_util import read_text
 from ..paths import find_repo_root, project_paths
 from ..runner.actions import complete_action, fail_action, is_implementation_action, load_actions
 from ..runner.model import ImplementationRecord, utc_now_iso
@@ -68,12 +69,16 @@ def run_complete(args: Namespace) -> int:
 
         implementation_record: ImplementationRecord | None = None
         if is_implementation_action(target):
+            base_sha = target.payload.get("implementation_base_sha")
+            if not isinstance(base_sha, str) and paths.implementation_base.exists():
+                base_sha = read_text(paths.implementation_base).strip() or None
             implementation_record = ImplementationRecord(
                 schema_version=1,
                 status="reported_complete",
                 action_id=target.id,
                 completed_at=utc_now_iso(),
                 summary_path=target.output_path or "",
+                base_sha=base_sha if isinstance(base_sha, str) else None,
             )
         completed = complete_action(
             paths,

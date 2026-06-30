@@ -65,6 +65,7 @@ brief
     run-state.json               # phase, status, pending_decision
     actions.json                 # pending / completed workflow actions
     events.jsonl                 # append-only audit log
+    implementation-base.txt      # Git base SHA for committed checkpoint review
     implementation.json          # host-reported implementation complete
 ```
 
@@ -112,9 +113,14 @@ Each action has a deterministic id (hash of run id, phase, kind, prompt path, ou
 
 Append-only records: phase changes, action enqueued/completed/failed, queue rebuilds, runner failures. Used for audit and action recovery. `action_completed` events include action id and output SHA-256 digest.
 
-### ImplementationRecord (`implementation.json`)
+### Implementation Base and Record
 
-Written only after an implementation action completes. Host-completion marker, not a code-acceptance decision.
+`implementation-base.txt` is written when the workflow enters implementation. It records the Git SHA
+used to render committed checkpoint diffs during code review and final check.
+
+`implementation.json` is written only after an implementation action completes. It is a
+host-completion marker, not a code-acceptance decision, and it carries the same base SHA for later
+snapshots.
 
 ## Adapters
 

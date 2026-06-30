@@ -23,6 +23,7 @@ class ProjectPaths:
     actions: Path
     events: Path
     implementation: Path
+    implementation_base: Path
     config: Path
 
 
@@ -58,5 +59,6 @@ def project_paths(repo: Path) -> ProjectPaths:
         actions=current / "actions.json",
         events=current / "events.jsonl",
         implementation=current / "implementation.json",
+        implementation_base=current / "implementation-base.txt",
         config=spoon / "config.json",
     )

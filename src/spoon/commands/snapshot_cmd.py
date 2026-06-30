@@ -7,9 +7,10 @@ from datetime import datetime
 from pathlib import Path, PurePosixPath
 
 from ..constants import SNAPSHOT_FILES
-from ..git_util import run_git
+from ..git_util import current_head_or_empty, run_git
 from ..io_util import read_text, write_text
 from ..paths import find_repo_root, project_paths
+from ..runner.state_store import load_implementation
 
 MAX_UNTRACKED_DIFF_BYTES = 200_000
 DEFAULT_SENSITIVE_SCAN = "# Sensitive Scan\n\nNot implemented beyond manual review prompt.\n"
@@ -66,6 +67,47 @@ def render_sections(sections: list[tuple[str, str]]) -> str:
         body = text.rstrip() or "_No changes._"
         rendered.append(f"## {title}\n\n{body}\n")
     return "\n".join(rendered)
+
+
+def implementation_base_sha(paths) -> tuple[str | None, str | None]:
+    if paths.implementation.exists():
+        try:
+            record = load_implementation(paths)
+        except (json.JSONDecodeError, ValueError) as exc:
+            warning = f"implementation.json was invalid and was skipped: {exc}"
+            if paths.implementation_base.exists():
+                return read_text(paths.implementation_base).strip() or None, warning
+            return None, warning
+        if record is not None and record.base_sha:
+            return record.base_sha, None
+    if paths.implementation_base.exists():
+        return read_text(paths.implementation_base).strip() or None, None
+    return None, None
+
+
+def committed_since_base_sections(
+    repo: Path,
+    base_sha: str | None,
+) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+    if not base_sha:
+        return [], []
+    head = current_head_or_empty(repo)
+    if head == base_sha:
+        return [], []
+    revision_range = f"{base_sha}..HEAD"
+    stat_sections = [
+        (
+            "Committed Since Implementation Base Diff Stat",
+            git_text(repo, ["diff", "--stat", revision_range]),
+        )
+    ]
+    diff_sections = [
+        (
+            "Committed Since Implementation Base",
+            git_text(repo, ["diff", revision_range]),
+        )
+    ]
+    return stat_sections, diff_sections
 
 
 def git_untracked_paths_or_error(repo: Path) -> tuple[list[str], str | None]:
@@ -167,12 +209,21 @@ def create_snapshot(repo: Path, test_cmd: str | None, dependency_cmd: str | None
     paths = project_paths(repo)
     paths.snapshots.mkdir(parents=True, exist_ok=True)
     untracked_paths, untracked_error = git_untracked_paths_or_error(repo)
+    base_sha, base_warning = implementation_base_sha(paths)
+    committed_stat_sections, committed_diff_sections = committed_since_base_sections(
+        repo,
+        base_sha,
+    )
+    if base_warning:
+        committed_stat_sections.insert(0, ("Implementation Base Warning", base_warning))
+        committed_diff_sections.insert(0, ("Implementation Base Warning", base_warning))
 
     write_text(snapshot_file(paths, "status.txt"), git_text(repo, ["status", "--short"]))
     write_text(
         snapshot_file(paths, "diff-stat.txt"),
         render_sections(
-            [
+            committed_stat_sections
+            + [
                 ("Unstaged Diff Stat", git_text(repo, ["diff", "--stat"])),
                 ("Staged Diff Stat", git_text(repo, ["diff", "--cached", "--stat"])),
                 ("Untracked Files", render_untracked_stat(untracked_paths, untracked_error)),
@@ -182,7 +233,8 @@ def create_snapshot(repo: Path, test_cmd: str | None, dependency_cmd: str | None
     write_text(
         snapshot_file(paths, "diff.patch"),
         render_sections(
-            [
+            committed_diff_sections
+            + [
                 ("Unstaged Diff", git_text(repo, ["diff"])),
                 ("Staged Diff", git_text(repo, ["diff", "--cached"])),
                 ("Untracked Files", render_untracked_diff(repo, untracked_paths, untracked_error)),

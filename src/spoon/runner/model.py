@@ -157,6 +157,7 @@ class ImplementationRecord:
     action_id: str
     completed_at: str
     summary_path: str
+    base_sha: str | None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -165,6 +166,7 @@ class ImplementationRecord:
             "action_id": self.action_id,
             "completed_at": self.completed_at,
             "summary_path": self.summary_path,
+            "base_sha": self.base_sha,
         }
 
     @classmethod
@@ -181,6 +183,7 @@ class ImplementationRecord:
             action_id=str(value["action_id"]),
             completed_at=str(value["completed_at"]),
             summary_path=str(value["summary_path"]),
+            base_sha=None if value.get("base_sha") is None else str(value["base_sha"]),
         )
 
 

@@ -9,6 +9,9 @@ This document is the contract for `spoon-orchestrator` and human fallback when u
 - The Runner is the only state owner. Host tools must not edit `actions.json` directly.
 - Host actions must not rewrite `review-board.md` decisions.
 - Host actions must not stage, commit, push, create GitHub Issues, or update Projects.
+- That Git rule applies to the host loop itself. An implementation prompt may allow a coding agent
+  to create a local checkpoint commit after relevant verification passes, but the host action must
+  not run Git commands on the agent's behalf.
 - The Runner may enqueue a `manual` fallback action itself (for example when an adapter is unavailable — exit code `20`). The host Skill must not invent fallback actions: on an unknown, ambiguous, unavailable, or unsafe action it runs `spoon action fail` and stops.
 - Cursor UI automation is disabled unless `.spoon/config.json` contains `"experimental_cursor_ui": true`.
 
@@ -107,4 +110,3 @@ Implementation actions also write `implementation.json` only after action comple
 - Corrupt `actions.json`: return failure and preserve the file.
 - Completed output deleted: recover action as pending.
 - Completed output digest mismatch: recover action as pending.
-

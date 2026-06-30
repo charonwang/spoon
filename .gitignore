@@ -18,3 +18,4 @@ dist/
 
 .spoon/
 docs/.design/
+.claude/

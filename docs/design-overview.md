@@ -12,6 +12,10 @@ A resumable **Runner** (`spoon run`) can advance workflow phases deterministical
 
 Spoon manages workflow artifacts only. It does not change application code, stage files, commit changes, push branches, or read private chat transcripts.
 
+Implementation prompts may let a coding agent create local checkpoint commits after relevant
+verification passes. Those commits are coding-agent recovery points; Spoon, the Runner, and host
+actions still do not perform Git writes.
+
 ## Commands
 
 Spoon provides file-workflow commands (`init`, `adopt-plan`, `snapshot`, `prompts`, `board`, `handoff`, `archive`) and orchestration commands (`run`, `action`, `export-github`).

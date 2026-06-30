@@ -51,6 +51,8 @@ User action: address remaining findings or explicitly accept risk on the board.
 - Do not call `spoon action complete` — no host action is pending.
 - Do not auto-fill Decisions or accept/reject findings.
 - Do not commit or push repository changes.
+  This rule applies to the host loop while paused for a decision; coding-agent checkpoint commits
+  may only happen from implementation prompts after relevant verification passes.
 
 After the user updates the board or required files, run `spoon run --json`
 again.

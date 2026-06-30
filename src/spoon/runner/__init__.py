@@ -1,1 +1,1 @@
-"""Spoon V2 workflow runner."""
+"""Spoon workflow runner."""

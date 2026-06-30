@@ -59,8 +59,10 @@ class RunnerModelTests(unittest.TestCase):
             action_id="abc",
             completed_at="2026-06-19T00:00:00+00:00",
             summary_path=".spoon/current/implementation-summary.md",
+            base_sha="base-sha",
         )
         self.assertEqual(record.to_dict()["status"], "reported_complete")
+        self.assertEqual(ImplementationRecord.from_dict(record.to_dict()), record)
 
 
 if __name__ == "__main__":

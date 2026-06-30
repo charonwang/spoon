@@ -7,6 +7,10 @@ SNAPSHOTS_DIR = "snapshots"
 GENERATED_START = "<!-- spoon:generated-findings:start -->"
 GENERATED_END = "<!-- spoon:generated-findings:end -->"
 
+BOARD_HEADING_ACCEPTED = "### Accepted For Handoff"
+BOARD_HEADING_PARKED = "### Parked"
+BOARD_HEADING_REJECTED = "### Rejected"
+
 PROMPT_FILES = [
     "cursor-plan.md",
     "cursor-implement.md",

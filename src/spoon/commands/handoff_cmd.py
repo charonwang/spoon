@@ -4,7 +4,12 @@ import re
 from argparse import Namespace
 from pathlib import Path
 
-from ..constants import GENERATED_START
+from ..constants import (
+    BOARD_HEADING_ACCEPTED,
+    BOARD_HEADING_PARKED,
+    BOARD_HEADING_REJECTED,
+    GENERATED_START,
+)
 from ..io_util import read_text, write_text
 from ..paths import find_repo_root, project_paths
 from ..templates import review_board_template
@@ -17,13 +22,15 @@ def register(subparsers):
 
 
 def extract_accepted_for_handoff(board_text: str) -> str:
-    match = re.search(r"(?m)^### Accepted For Handoff\s*$", board_text)
+    match = re.search(rf"(?m)^{re.escape(BOARD_HEADING_ACCEPTED)}\s*$", board_text)
     if match is None:
         return ""
 
     remainder = board_text[match.end() :]
     stop = re.search(
-        rf"(?m)^(?:### Parked\s*$|### Rejected\s*$|{re.escape(GENERATED_START)})",
+        rf"(?m)^(?:{re.escape(BOARD_HEADING_PARKED)}\s*$"
+        rf"|{re.escape(BOARD_HEADING_REJECTED)}\s*$"
+        rf"|{re.escape(GENERATED_START)})",
         remainder,
     )
     accepted = remainder[: stop.start() if stop else len(remainder)]
@@ -49,10 +56,19 @@ def generate_handoff(repo: Path) -> None:
             "Only implement the items below.\n\n"
             f"{body}\n\n"
             "## Constraints\n\n"
+            "- plan.md is the single source of truth; do not redesign it and do not rely on planning chat history.\n"
+            "- After completing an approved item, only check existing checkbox items in plan.md "
+            "that directly match the completed work.\n"
+            "- Do not add checklist items, rewrite plan text, or record review history in plan.md.\n"
+            "- If no existing checkbox maps to completed work, report that gap instead of editing plan.md.\n"
             "- Keep changes scoped to Approved Changes.\n"
             "- Do not implement Optional or Parked findings.\n"
+            "- On a defect or conflict with the code, stop and report instead of changing the approach.\n"
             "- Preserve unrelated user changes.\n"
-            "- Run the listed verification commands or explain why they cannot run.\n"
+            "- Run the relevant verification for the completed approved item or review-fix batch, "
+            "or explain why it cannot run.\n"
+            "- After relevant verification passes, you may create a local checkpoint commit for that batch.\n"
+            "- Stage only files for that batch. Do not rewrite history, squash, or push.\n"
             "- After implementation, summarize changed files, verification output, and remaining risk.\n"
         ),
     )

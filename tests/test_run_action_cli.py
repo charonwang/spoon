@@ -44,7 +44,7 @@ class RunActionCliTests(unittest.TestCase):
             prompt_path=prompt,
             output_path=output,
             working_directory=str(self.repo),
-            payload={"phase": "implementation"},
+            payload={"phase": "implementation", "implementation_base_sha": "base-sha"},
             attempts=0,
             created_at=now,
             updated_at=now,
@@ -88,6 +88,7 @@ class RunActionCliTests(unittest.TestCase):
         assert record is not None
         self.assertEqual(record.action_id, action.id)
         self.assertEqual(record.status, "reported_complete")
+        self.assertEqual(record.base_sha, "base-sha")
 
     def test_review_complete_does_not_write_implementation_json(self):
         now = utc_now_iso()
@@ -141,6 +142,7 @@ class RunActionCliTests(unittest.TestCase):
             action_id=action.id,
             completed_at=utc_now_iso(),
             summary_path=action.output_path or "",
+            base_sha=None,
         )
         with patch("spoon.runner.state_store.save_implementation", side_effect=RuntimeError("boom")):
             with self.assertRaises(RuntimeError):

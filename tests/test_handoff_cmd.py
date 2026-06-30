@@ -80,6 +80,22 @@ class HandoffCommandTests(unittest.TestCase):
             text = (repo / ".spoon" / "current" / "handoff.md").read_text(encoding="utf-8")
             self.assertIn("_No approved changes yet._", text)
 
+    def test_generate_handoff_documents_plan_checkboxes_and_checkpoint_boundary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            create_current_layout(repo)
+
+            generate_handoff(repo)
+
+            text = (repo / ".spoon" / "current" / "handoff.md").read_text(encoding="utf-8")
+            self.assertIn("only check existing checkbox items in plan.md", text)
+            self.assertIn("Do not add checklist items", text)
+            self.assertIn("After relevant verification passes", text)
+            self.assertIn("local checkpoint commit", text)
+            self.assertIn("Stage only files for that batch", text)
+            self.assertIn("Do not rewrite history, squash, or push", text)
+
 
 if __name__ == "__main__":
     unittest.main()

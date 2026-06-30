@@ -65,6 +65,14 @@ flow readable as a small transition table, use that table to render `spoon graph
 trace events tied to phase/action/gate names. Spoon should not adopt VibeGraphing, model adapters,
 or nested agent graph nodes.
 
+V3 should also borrow from practical agent workflows without binding to a specific toolchain:
+challenge the brief before planning, split unknowns into code research and external research, keep
+PRD/design/implementation notes separate enough to review, run implementation through a host action,
+then finish with an explicit check, reusable-notes step, and archive record. During implementation,
+coding agents may check existing plan checklist items and create local checkpoint commits only after
+the relevant verification for a completed approved item or review-fix batch passes. Spoon and host
+actions still do not perform those Git writes, and they must not push.
+
 Candidate V3 steps:
 
 1. Extract the fixed phase transitions from `engine.py` into a small transition table used by tests
@@ -74,7 +82,9 @@ Candidate V3 steps:
    gate. Rendering the transition table to Mermaid mirrors LangGraph's `get_graph().draw_mermaid()`.
 3. Use one pause record shape for user decisions and host actions, carrying the input needed to
    continue — the equivalent of LangGraph's `interrupt` + `Command(resume=...)`.
-4. Revisit LangGraph or another runtime only if Spoon becomes a multi-client service, needs concurrent workflows, or needs hosted workflow inspection.
+4. Keep command modules from depending on Runner internals. In particular, revisit the
+   implementation base / record read path so `snapshot` does not need to import `runner.state_store`.
+5. Revisit LangGraph or another runtime only if Spoon becomes a multi-client service, needs concurrent workflows, or needs hosted workflow inspection.
 
 ### MCP facade (conditional)
 
@@ -92,7 +102,7 @@ All calls must go through existing Runner modules — no second state store.
 ### Other non-goals
 
 - Redis, SQLite, WebSocket brokers, or message buses
-- Auto `git commit`, `push`, Issue creation, or Project updates
+- Spoon or Runner auto `git commit`, `push`, Issue creation, or Project updates
 - `--dangerously-skip-permissions`, `--yolo`, or equivalent on external tools
 - Cursor UI automation by default (`experimental_cursor_ui` opt-in only)
 - Uploading raw `.spoon/current/`, patches, logs, or transcripts to GitHub

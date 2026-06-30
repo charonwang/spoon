@@ -41,6 +41,7 @@ class RunnerStateStoreTests(unittest.TestCase):
         self.assertEqual(self.paths.actions, self.paths.current / "actions.json")
         self.assertEqual(self.paths.events, self.paths.current / "events.jsonl")
         self.assertEqual(self.paths.implementation, self.paths.current / "implementation.json")
+        self.assertEqual(self.paths.implementation_base, self.paths.current / "implementation-base.txt")
         self.assertEqual(self.paths.config, self.paths.spoon / "config.json")
 
     def test_atomic_write_preserves_old_file_on_failure(self):
@@ -63,6 +64,7 @@ class RunnerStateStoreTests(unittest.TestCase):
             action_id="abc",
             completed_at="2026-06-19T00:00:00+00:00",
             summary_path=".spoon/current/implementation-summary.md",
+            base_sha="base-sha",
         )
         save_implementation(self.paths, record)
         self.assertEqual(load_implementation(self.paths), record)

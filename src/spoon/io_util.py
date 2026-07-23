@@ -21,6 +21,17 @@ def read_text(path: Path) -> str:
         return _normalize_lf(handle.read())
 
 
+def read_bytes(path: Path) -> bytes:
+    with path.open("rb") as handle:
+        return handle.read()
+
+
+def append_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write(_normalize_lf(text))
+
+
 def append_unique_line(path: Path, line: str) -> None:
     candidate = _normalize_lf(line).strip()
     existing = read_text(path) if path.exists() else ""

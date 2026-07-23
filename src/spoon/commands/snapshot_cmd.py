@@ -8,18 +8,21 @@ from pathlib import Path, PurePosixPath
 
 from ..constants import SNAPSHOT_FILES
 from ..git_util import current_head_or_empty, run_git
-from ..io_util import read_text, write_text
+from ..io_util import read_bytes, read_text, write_text
 from ..paths import find_repo_root, project_paths
 from ..runner.state_store import load_implementation
+from ..sanitize import redact_secrets, scan_for_secrets
 
 MAX_UNTRACKED_DIFF_BYTES = 200_000
-DEFAULT_SENSITIVE_SCAN = "# Sensitive Scan\n\nNot implemented beyond manual review prompt.\n"
 
 
 def register(subparsers):
-    parser = subparsers.add_parser("snapshot", help="Refresh git and command snapshots.")
-    parser.add_argument("--repo", type=Path, default=Path.cwd(), help="Repository path.")
-    parser.add_argument("--test-cmd", default=None, help="Optional test command string.")
+    parser = subparsers.add_parser(
+        "snapshot", help="Refresh git and command snapshots.")
+    parser.add_argument("--repo", type=Path,
+                        default=Path.cwd(), help="Repository path.")
+    parser.add_argument("--test-cmd", default=None,
+                        help="Optional test command string.")
     parser.add_argument(
         "--dependency-cmd",
         default=None,
@@ -118,7 +121,8 @@ def committed_since_base_sections(
 
 
 def git_untracked_paths_or_error(repo: Path) -> tuple[list[str], str | None]:
-    result = run_git(repo, ["ls-files", "--others", "--exclude-standard", "-z"])
+    result = run_git(repo, ["ls-files", "--others",
+                     "--exclude-standard", "-z"])
     if result.returncode == 0:
         return [item for item in result.stdout.split("\0") if item], None
 
@@ -152,7 +156,7 @@ def render_untracked_file_diff(repo: Path, git_path: str) -> str:
     if not path.is_file():
         return header + "# Skipped: not a regular file.\n"
 
-    data = path.read_bytes()
+    data = read_bytes(path)
     if len(data) > MAX_UNTRACKED_DIFF_BYTES:
         return (
             header
@@ -197,13 +201,38 @@ def update_metadata_snapshot_time(metadata_path: Path, repo: Path) -> None:
         }
 
     data["last_snapshot_at"] = snapshot_time
-    write_text(metadata_path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    write_text(metadata_path, json.dumps(
+        data, ensure_ascii=False, indent=2) + "\n")
 
 
-def write_default_sensitive_scan(path: Path) -> None:
-    if path.exists() and read_text(path).strip():
-        return
-    write_text(path, DEFAULT_SENSITIVE_SCAN)
+def render_sensitive_scan(snapshot_texts: list[str]) -> str:
+    findings: list[str] = []
+    for text in snapshot_texts:
+        for label in scan_for_secrets(text):
+            findings.append(f"- matched pattern family {label}")
+    # De-dupe while preserving order.
+    unique: list[str] = []
+    seen: set[str] = set()
+    for item in findings:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    if not unique:
+        return (
+            "# Sensitive Scan\n\n"
+            "Status: passed\n\n"
+            "No common secret patterns detected in snapshot command output "
+            "or collected diffs (heuristic scan).\n"
+        )
+    body = "\n".join(unique)
+    return (
+        "# Sensitive Scan\n\n"
+        "Status: failed\n\n"
+        "Common secret patterns were detected and redacted in snapshot "
+        "artifacts before write:\n\n"
+        f"{body}\n"
+    )
 
 
 def snapshot_file(paths, name: str) -> Path:
@@ -223,42 +252,63 @@ def create_snapshot(repo: Path, test_cmd: str | None, dependency_cmd: str | None
         base_sha,
     )
     if base_warning:
-        committed_stat_sections.insert(0, ("Implementation Base Warning", base_warning))
-        committed_diff_sections.insert(0, ("Implementation Base Warning", base_warning))
+        committed_stat_sections.insert(
+            0, ("Implementation Base Warning", base_warning))
+        committed_diff_sections.insert(
+            0, ("Implementation Base Warning", base_warning))
 
-    write_text(snapshot_file(paths, "status.txt"), git_text(repo, ["status", "--short"]))
-    write_text(
-        snapshot_file(paths, "diff-stat.txt"),
-        render_sections(
-            committed_stat_sections
-            + [
-                ("Unstaged Diff Stat", git_text(repo, ["diff", "--stat"])),
-                ("Staged Diff Stat", git_text(repo, ["diff", "--cached", "--stat"])),
-                ("Untracked Files", render_untracked_stat(untracked_paths, untracked_error)),
-            ],
-        ),
+    status_text = git_text(repo, ["status", "--short"])
+    diff_stat_text = render_sections(
+        committed_stat_sections
+        + [
+            ("Unstaged Diff Stat", git_text(repo, ["diff", "--stat"])),
+            ("Staged Diff Stat", git_text(
+                repo, ["diff", "--cached", "--stat"])),
+            ("Untracked Files", render_untracked_stat(
+                untracked_paths, untracked_error)),
+        ],
     )
-    write_text(
-        snapshot_file(paths, "diff.patch"),
-        render_sections(
-            committed_diff_sections
-            + [
-                ("Unstaged Diff", git_text(repo, ["diff"])),
-                ("Staged Diff", git_text(repo, ["diff", "--cached"])),
-                ("Untracked Files", render_untracked_diff(repo, untracked_paths, untracked_error)),
-            ],
-        ),
+    diff_patch_text = render_sections(
+        committed_diff_sections
+        + [
+            ("Unstaged Diff", git_text(repo, ["diff"])),
+            ("Staged Diff", git_text(repo, ["diff", "--cached"])),
+            ("Untracked Files", render_untracked_diff(
+                repo, untracked_paths, untracked_error)),
+        ],
     )
+    recent_commits_text = git_text(repo, ["log", "--oneline", "-n", "10"])
+    test_output_text = command_report("Test Output", test_cmd, repo)
+    dependency_text = command_report("Dependency Check", dependency_cmd, repo)
+    sensitive_scan_text = render_sensitive_scan(
+        [
+            status_text,
+            diff_stat_text,
+            diff_patch_text,
+            recent_commits_text,
+            test_output_text,
+            dependency_text,
+        ]
+    )
+
+    write_text(snapshot_file(paths, "status.txt"), redact_secrets(status_text))
+    write_text(snapshot_file(paths, "diff-stat.txt"),
+               redact_secrets(diff_stat_text))
+    write_text(snapshot_file(paths, "diff.patch"),
+               redact_secrets(diff_patch_text))
     write_text(
         snapshot_file(paths, "recent-commits.txt"),
-        git_text(repo, ["log", "--oneline", "-n", "10"]),
+        redact_secrets(recent_commits_text),
     )
-    write_text(snapshot_file(paths, "test-output.txt"), command_report("Test Output", test_cmd, repo))
+    write_text(snapshot_file(paths, "test-output.txt"),
+               redact_secrets(test_output_text))
     write_text(
         snapshot_file(paths, "dependency-check.txt"),
-        command_report("Dependency Check", dependency_cmd, repo),
+        redact_secrets(dependency_text),
     )
-    write_default_sensitive_scan(snapshot_file(paths, "sensitive-scan.txt"))
+    sensitive_path = snapshot_file(paths, "sensitive-scan.txt")
+    if not (sensitive_path.exists() and read_text(sensitive_path).strip()):
+        write_text(sensitive_path, sensitive_scan_text)
     update_metadata_snapshot_time(paths.metadata, repo)
     report_step("Done.")
 

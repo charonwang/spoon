@@ -55,7 +55,7 @@ Phase graph, gates, exit codes, and persistence rules: [architecture.md](archite
   `default` or `fast`). Enable surfaces with `agents.claude.cli`,
   `agents.codex.cli`, and `agents.codex.desktop`. When `visible_terminals` is
   true, Claude review display follows `terminal.launcher` (`windows_terminal`
-  by default; also `conhost`, `tabby`, `custom`, `inline`). Conversation titles are
+  by default; also `conhost`, `tabby` (falls back on Windows), `custom`, `inline`). Conversation titles are
   `Spoon:<task_label>`: label comes from `spoon run --label`, else the first
   line of brief `## Goal`, persisted on `run-state.json` for the current
   requirement (one Claude/Codex conversation per run). Omit or null model

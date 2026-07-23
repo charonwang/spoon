@@ -59,26 +59,42 @@ class TerminalLaunchTests(unittest.TestCase):
             self.assertEqual(exe, r"C:\wt.exe")
             self.assertIn("windows_terminal", note)
 
-    def test_build_tabby_argv_has_no_double_dash_separator(self):
+    def test_build_tabby_argv_is_disabled(self):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             inner = ["claude", "--session-id", "abc"]
-            with patch(
-                "spoon.adapters.terminal_launch.find_executable",
-                return_value=r"C:\Tabby\Tabby.exe",
-            ):
-                argv, _exe, note = build_terminal_argv(
+            with self.assertRaisesRegex(ValueError, "tabby CLI run is disabled"):
+                build_terminal_argv(
                     "tabby",
                     cwd=cwd,
                     inner_argv=inner,
                     executable=None,
                     args=None,
                 )
-            assert argv is not None
-            self.assertEqual(argv[:2], [r"C:\Tabby\Tabby.exe", "run"])
-            self.assertEqual(argv[2:], inner)
-            self.assertNotIn("--", argv)
-            self.assertIn("tabby", note)
+
+    def test_resolve_tabby_falls_back_to_windows_terminal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            job = cwd / "job.json"
+
+            def _find(name: str):
+                if name in {"wt", "windows_terminal"}:
+                    return r"C:\wt.exe"
+                if "tabby" in name.lower():
+                    return r"C:\Tabby\Tabby.exe"
+                return None
+
+            with patch(
+                "spoon.adapters.terminal_launch.find_executable",
+                side_effect=_find,
+            ):
+                resolved = resolve_terminal(
+                    TerminalConfig(launcher="tabby"),
+                    cwd=cwd,
+                    job_path=job,
+                )
+            self.assertEqual(resolved.launcher, "windows_terminal")
+            self.assertIsNotNone(resolved.argv)
 
     def test_build_pwsh_argv_quotes_inner_command(self):
         with tempfile.TemporaryDirectory() as tmp:

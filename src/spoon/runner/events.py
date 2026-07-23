@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from ..io_util import read_text
+from ..io_util import append_text, read_text
 from ..paths import ProjectPaths
+from ..sanitize import redact_secrets_in_data
 from .model import utc_now_iso
 
 
@@ -17,11 +18,9 @@ def append_event(paths: ProjectPaths, event_type: str, data: dict[str, Any]) -> 
     record = {
         "type": event_type,
         "timestamp": utc_now_iso(),
-        "data": data,
+        "data": redact_secrets_in_data(data),
     }
-    line = json.dumps(record, ensure_ascii=False) + "\n"
-    with paths.events.open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(line)
+    append_text(paths.events, json.dumps(record, ensure_ascii=False) + "\n")
 
 
 def load_events(paths: ProjectPaths) -> list[dict[str, Any]]:
@@ -34,7 +33,8 @@ def load_events(paths: ProjectPaths) -> list[dict[str, Any]]:
         try:
             item = json.loads(line)
         except json.JSONDecodeError as exc:
-            raise EventsCorruptError(f"events.jsonl line {line_number}: {exc}") from exc
+            raise EventsCorruptError(
+                f"events.jsonl line {line_number}: {exc}") from exc
         if not isinstance(item, dict):
             raise EventsCorruptError(
                 f"events.jsonl line {line_number} must be an object, got {type(item).__name__}"

@@ -43,7 +43,10 @@ When `.spoon/config.json` has `"agents": { "claude": { "cli": true } }`
 - With `visible_terminals: true`, Claude may open in `terminal.launcher`
   (`windows_terminal`, `conhost`, `tabby`, `custom`, or `inline`). Spoon still
   captures stream-json for the review file. `inline` tees into the spoon process;
-  Cursor's Terminal panel cannot be opened from the CLI.
+  Cursor's Terminal panel cannot be opened from the CLI. On Windows, `tabby`
+  falls through to `windows_terminal` / `pwsh` / `conhost` because Tabby's
+  `run` CLI has been observed to start then crash; use `custom` if you have a
+  working Tabby invocation.
 - Do not pass permission-skipping flags.
 - Verify target-machine support with `claude --help`.
 - Render review Markdown with `## Verdict`, `## Summary`, and `## Findings`.

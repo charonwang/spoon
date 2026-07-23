@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -608,71 +609,74 @@ class ClaudeCliAdapter:
         timeout_seconds: int,
     ) -> AdapterResult:
         work = Path(tempfile.mkdtemp(prefix="spoon-claude-vis-"))
-        job_path = work / "job.json"
-        capture_path = work / "capture.jsonl"
-        exit_path = work / "exit.txt"
-        prompt_file = work / "prompt.txt"
-        write_text(prompt_file, prompt_text)
-        write_visible_job(
-            job_path,
-            cmd=cmd,
-            cwd=repo,
-            prompt_path=prompt_file,
-            capture_path=capture_path,
-            exit_path=exit_path,
-        )
-        resolved = resolve_terminal(
-            self.terminal, cwd=repo, job_path=job_path)
-        if resolved.launcher == "inline" or resolved.argv is None:
+        try:
+            job_path = work / "job.json"
+            capture_path = work / "capture.jsonl"
+            exit_path = work / "exit.txt"
+            prompt_file = work / "prompt.txt"
+            write_text(prompt_file, prompt_text)
+            write_visible_job(
+                job_path,
+                cmd=cmd,
+                cwd=repo,
+                prompt_path=prompt_file,
+                capture_path=capture_path,
+                exit_path=exit_path,
+            )
+            resolved = resolve_terminal(
+                self.terminal, cwd=repo, job_path=job_path)
+            if resolved.launcher == "inline" or resolved.argv is None:
+                sys.stderr.write(
+                    f"spoon: external terminal unavailable ({resolved.note}); "
+                    "falling back to inline stream\n"
+                )
+                sys.stderr.flush()
+                return self._execute_visible(
+                    cmd, repo, prompt_text, output_path, timeout_seconds)
+
             sys.stderr.write(
-                f"spoon: external terminal unavailable ({resolved.note}); "
-                "falling back to inline stream\n"
+                f"spoon: opening Claude in {resolved.note}\n"
             )
             sys.stderr.flush()
-            return self._execute_visible(
-                cmd, repo, prompt_text, output_path, timeout_seconds)
-
-        sys.stderr.write(
-            f"spoon: opening Claude in {resolved.note}\n"
-        )
-        sys.stderr.flush()
-        try:
-            launch_external_terminal(resolved, cwd=repo)
-            returncode = wait_for_exit_file(
-                exit_path, timeout_seconds=timeout_seconds)
-        except TimeoutError:
-            return AdapterResult(
-                status=AdapterStatus.UNAVAILABLE,
-                message=f"claude command timed out after {timeout_seconds}s",
-            )
-        except OSError as exc:
-            return AdapterResult(
-                status=AdapterStatus.UNAVAILABLE,
-                message=f"failed to launch terminal: {exc}",
-            )
-
-        capture_text = read_text(
-            capture_path) if capture_path.is_file() else ""
-        captured_lines = capture_text.splitlines()
-        auth_text = capture_text
-        if returncode != 0:
-            if AUTH_FAILURE_RE.search(auth_text):
+            try:
+                launch_external_terminal(resolved, cwd=repo)
+                returncode = wait_for_exit_file(
+                    exit_path, timeout_seconds=timeout_seconds)
+            except TimeoutError:
                 return AdapterResult(
                     status=AdapterStatus.UNAVAILABLE,
-                    message="claude authentication failed",
+                    message=f"claude command timed out after {timeout_seconds}s",
                 )
-            return AdapterResult(
-                status=AdapterStatus.FAILED,
-                message=f"claude exited with code {returncode}",
-            )
-        try:
-            payload = _parse_stream_json_lines(captured_lines)
-        except ValueError as exc:
-            return AdapterResult(
-                status=AdapterStatus.FAILED,
-                message=f"invalid claude review json: {exc}",
-            )
-        return self._finalize_payload(payload, output_path)
+            except OSError as exc:
+                return AdapterResult(
+                    status=AdapterStatus.UNAVAILABLE,
+                    message=f"failed to launch terminal: {exc}",
+                )
+
+            capture_text = read_text(
+                capture_path) if capture_path.is_file() else ""
+            captured_lines = capture_text.splitlines()
+            auth_text = capture_text
+            if returncode != 0:
+                if AUTH_FAILURE_RE.search(auth_text):
+                    return AdapterResult(
+                        status=AdapterStatus.UNAVAILABLE,
+                        message="claude authentication failed",
+                    )
+                return AdapterResult(
+                    status=AdapterStatus.FAILED,
+                    message=f"claude exited with code {returncode}",
+                )
+            try:
+                payload = _parse_stream_json_lines(captured_lines)
+            except ValueError as exc:
+                return AdapterResult(
+                    status=AdapterStatus.FAILED,
+                    message=f"invalid claude review json: {exc}",
+                )
+            return self._finalize_payload(payload, output_path)
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
 
     def execute(self, request: AdapterRequest) -> AdapterResult:
         repo = Path(request.working_directory)

@@ -1,3 +1,4 @@
+import io
 import os
 import subprocess
 import tempfile
@@ -16,7 +17,7 @@ from spoon.adapters.codex_app import (
     _load_codex_threads,
 )
 from spoon.commands.init_cmd import create_current_layout
-from spoon.io_util import read_text, write_text
+from spoon.io_util import write_text
 from spoon.paths import project_paths
 from spoon.runner.events import load_events
 
@@ -101,6 +102,74 @@ class CodexAppServerAdapterTests(unittest.TestCase):
         finally:
             os.close(write_fd)
             client.close()
+
+    def test_json_rpc_client_answers_server_approval_requests(self):
+        read_fd, write_fd = os.pipe()
+        proc = MagicMock()
+        proc.stdin = MagicMock()
+        proc.stdout = os.fdopen(read_fd, "r", encoding="utf-8", newline="\n")
+        proc.stderr = io.StringIO("")
+        proc.poll.return_value = None
+        client = _JsonRpcClient(proc, deadline=time.monotonic() + 5)
+        try:
+            os.write(
+                write_fd,
+                (
+                    b'{"jsonrpc":"2.0","id":7,"method":"item/commandExecution/requestApproval",'
+                    b'"params":{"command":"ls"}}\n'
+                    b'{"jsonrpc":"2.0","id":1,"result":{"ok":true}}\n'
+                ),
+            )
+            result = client._read_until_response(1)
+            self.assertEqual(result, {"ok": True})
+            written = "".join(
+                call.args[0] for call in proc.stdin.write.call_args_list
+            )
+            self.assertIn('"id": 7', written)
+            self.assertIn('"decision": "accept"', written)
+        finally:
+            os.close(write_fd)
+            client.close()
+
+    def test_json_rpc_client_declines_elicitation_requests(self):
+        read_fd, write_fd = os.pipe()
+        proc = MagicMock()
+        proc.stdin = MagicMock()
+        proc.stdout = os.fdopen(read_fd, "r", encoding="utf-8", newline="\n")
+        proc.stderr = io.StringIO("")
+        proc.poll.return_value = None
+        client = _JsonRpcClient(proc, deadline=time.monotonic() + 5)
+        try:
+            os.write(
+                write_fd,
+                (
+                    b'{"jsonrpc":"2.0","id":9,"method":"mcpServer/elicitation/request",'
+                    b'"params":{"mode":"form","message":"ok"}}\n'
+                    b'{"jsonrpc":"2.0","id":1,"result":{"ok":true}}\n'
+                ),
+            )
+            client._read_until_response(1)
+            written = "".join(
+                call.args[0] for call in proc.stdin.write.call_args_list
+            )
+            self.assertIn('"id": 9', written)
+            self.assertIn('"action": "decline"', written)
+        finally:
+            os.close(write_fd)
+            client.close()
+
+    def test_json_rpc_client_close_closes_streams(self):
+        proc = MagicMock()
+        proc.stdin = MagicMock()
+        proc.stdout = io.StringIO("")
+        proc.stderr = io.StringIO("")
+        proc.poll.return_value = None
+        client = _JsonRpcClient(proc, deadline=time.monotonic() + 5)
+        client.close()
+        proc.stdin.close.assert_called()
+        self.assertTrue(proc.stdout.closed)
+        self.assertTrue(proc.stderr.closed)
+        proc.terminate.assert_called()
 
     @patch.object(CodexAppServerAdapter, "_nudge_desktop_refresh")
     @patch.object(CodexAppServerAdapter, "_resolve_thread_id", return_value="thread-1")

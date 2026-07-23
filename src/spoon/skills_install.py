@@ -4,7 +4,6 @@ import os
 import shutil
 from pathlib import Path
 
-
 SKILL_DIR_NAME = "spoon"
 
 

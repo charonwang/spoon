@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,7 +11,6 @@ from spoon.adapters.claude_sessions import (
 )
 from spoon.commands.init_cmd import create_current_layout
 from spoon.paths import project_paths
-import subprocess
 
 
 class ClaudeSessionsTests(unittest.TestCase):

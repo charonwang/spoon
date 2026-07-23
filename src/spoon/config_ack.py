@@ -4,7 +4,7 @@ import hashlib
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from .io_util import read_json, write_json_atomic
+from .io_util import read_bytes, read_json, write_json_atomic
 from .paths import ProjectPaths
 
 
@@ -22,7 +22,7 @@ class ConfigAckStatus:
 
 
 def config_digest(paths: ProjectPaths) -> str:
-    raw = paths.config.read_bytes() if paths.config.is_file() else b""
+    raw = read_bytes(paths.config) if paths.config.is_file() else b""
     return hashlib.sha256(raw).hexdigest()
 
 
@@ -36,7 +36,8 @@ def _load_ack(paths: ProjectPaths) -> tuple[str | None, str | None]:
     confirmed_at = raw.get("confirmed_at")
     return (
         digest if isinstance(digest, str) and digest else None,
-        confirmed_at if isinstance(confirmed_at, str) and confirmed_at else None,
+        confirmed_at if isinstance(
+            confirmed_at, str) and confirmed_at else None,
     )
 
 

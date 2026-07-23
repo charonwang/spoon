@@ -13,6 +13,7 @@ from ..io_util import read_json, write_json_atomic, write_text
 from ..paths import ProjectPaths, project_paths
 from ..review_parser import classify_review_text
 from ..runner.events import append_event
+from ..sanitize import redact_secrets
 from .base import AdapterRequest, AdapterResult, AdapterStatus
 from .command_util import resolve_executable
 
@@ -23,6 +24,19 @@ APP_SERVER_CONNECT_DELAY_SECONDS = 2.0
 # Kept as aliases for older tests / imports.
 PROXY_CONNECT_RETRIES = APP_SERVER_CONNECT_RETRIES
 PROXY_CONNECT_DELAY_SECONDS = APP_SERVER_CONNECT_DELAY_SECONDS
+
+_APPROVAL_METHODS = frozenset(
+    {
+        "item/commandExecution/requestApproval",
+        "item/fileChange/requestApproval",
+        "item/permissions/requestApproval",
+    }
+)
+_ELICITATION_METHODS = frozenset(
+    {
+        "mcpServer/elicitation/request",
+    }
+)
 
 
 class CodexThreadsCorruptError(Exception):
@@ -157,6 +171,19 @@ class _JsonRpcClient:
                 self._proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 self._proc.kill()
+                try:
+                    self._proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass
+        for stream in (self._stdout, self._stderr):
+            if stream is None:
+                continue
+            try:
+                stream.close()
+            except OSError:
+                pass
+        self._reader.join(timeout=2)
+        self._stderr_thread.join(timeout=2)
 
     def notify(self, method: str, params: dict[str, object] | None = None) -> None:
         payload = {"jsonrpc": "2.0", "method": method, "params": params or {}}
@@ -215,6 +242,42 @@ class _JsonRpcClient:
         self._stdin.write(line)
         self._stdin.flush()
 
+    def _respond(self, request_id: object, result: dict[str, object]) -> None:
+        self._write({"jsonrpc": "2.0", "id": request_id, "result": result})
+
+    def _handle_server_request(self, data: dict[str, object]) -> bool:
+        """Answer server→client requests. Returns True when handled."""
+        method = data.get("method")
+        request_id = data.get("id")
+        if request_id is None or not isinstance(method, str):
+            return False
+        if method in _APPROVAL_METHODS:
+            # Headless review turns: accept workspace actions so the turn can finish.
+            self._respond(request_id, {"decision": "accept"})
+            return True
+        if method in _ELICITATION_METHODS:
+            # Spoon cannot collect interactive MCP form/url input; decline cleanly.
+            self._respond(request_id, {"action": "decline", "content": None})
+            return True
+        # Avoid hanging the turn on unrecognized server→client requests.
+        self._write(
+            {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {
+                    "code": -32601,
+                    "message": f"Method not handled by spoon: {method}",
+                },
+            }
+        )
+        return True
+
+    def _dispatch_incoming(self, data: dict[str, object]) -> dict[str, object] | None:
+        if "method" in data and "id" in data and "result" not in data and "error" not in data:
+            self._handle_server_request(data)
+            return None
+        return data
+
     def _read_until_response(self, request_id: int) -> dict[str, object]:
         while True:
             line = self._read_line()
@@ -224,9 +287,14 @@ class _JsonRpcClient:
             data = json.loads(stripped)
             if not isinstance(data, dict):
                 continue
+            data = self._dispatch_incoming(data)
+            if data is None:
+                continue
             if data.get("id") == request_id:
                 if "error" in data:
-                    raise RuntimeError(f"json-rpc error: {data['error']}")
+                    raise RuntimeError(
+                        f"json-rpc error: {redact_secrets(str(data['error']))}"
+                    )
                 result = data.get("result")
                 if isinstance(result, dict):
                     return result
@@ -241,6 +309,9 @@ class _JsonRpcClient:
                 continue
             data = json.loads(stripped)
             if not isinstance(data, dict):
+                continue
+            data = self._dispatch_incoming(data)
+            if data is None:
                 continue
             method = data.get("method")
             if method == "turn/completed":
@@ -333,14 +404,15 @@ class CodexAppServerAdapter:
             # Desktop path only: do not silently fall back to `codex exec`
             # (that hides Desktop and makes hosts claim "Desktop unavailable"
             # after a different failure). Surface the real app-server error.
-            message = f"codex app-server failed: {exc}"
+            safe_reason = redact_secrets(str(exc))
+            message = f"codex app-server failed: {safe_reason}"
             print(f"spoon: {message}", file=sys.stderr, flush=True)
             append_event(
                 paths,
                 "codex_desktop_failed",
                 {
                     "action_id": request.action_id,
-                    "reason": str(exc),
+                    "reason": safe_reason,
                 },
             )
             return AdapterResult(

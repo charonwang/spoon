@@ -108,13 +108,14 @@ def build_terminal_argv(
         )
 
     if launcher == "tabby":
-        name = executable or "tabby"
-        exe = find_executable(name)
-        if exe is None:
-            raise FileNotFoundError(f"tabby executable not found: {name}")
-        # Tabby CLI is `run [command...]` (no wt-style `--` separator). A leading
-        # `--` becomes command[0] and the tab never starts usefully.
-        return [exe, "run", *inner_argv], exe, f"tabby ({exe})"
+        # Tabby.exe `run …` has been observed to spawn then crash/hang on Windows
+        # (Electron CLI / stripAnsi), so resolve_terminal never reaches fallbacks.
+        # Keep the launcher name for config compatibility; users who have a working
+        # invocation can use terminal.launcher=custom.
+        raise ValueError(
+            "tabby CLI run is disabled on Windows (process starts then crashes); "
+            "use windows_terminal, pwsh, conhost, or custom"
+        )
 
     if launcher == "conhost":
         return list(inner_argv), inner_argv[0], "conhost (new console)"

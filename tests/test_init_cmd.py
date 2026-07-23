@@ -20,7 +20,8 @@ class InitCommandTests(unittest.TestCase):
     def test_create_current_layout(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "init"], cwd=repo,
+                           check=True, capture_output=True)
             create_current_layout(repo)
 
             current = repo / ".spoon" / "current"
@@ -29,9 +30,11 @@ class InitCommandTests(unittest.TestCase):
             self.assertTrue((current / "review-board.md").exists())
             self.assertTrue((current / "handoff.md").exists())
             self.assertTrue((current / "metadata.json").exists())
-            self.assertTrue((current / "prompts" / "final-plan-review.md").exists())
+            self.assertTrue(
+                (current / "prompts" / "final-plan-review.md").exists())
             self.assertTrue((current / "reviews" / "codex-plan.md").exists())
             self.assertTrue((current / "snapshots" / "status.txt").exists())
+            self.assertFalse((repo / ".cursor").exists())
 
             exclude = repo / ".git" / "info" / "exclude"
             self.assertIn(".spoon/", exclude.read_text(encoding="utf-8"))
@@ -41,7 +44,8 @@ class InitCommandTests(unittest.TestCase):
             main = Path(tmp) / "main"
             worktree = Path(tmp) / "worktree"
             main.mkdir()
-            subprocess.run(["git", "init"], cwd=main, check=True, capture_output=True)
+            subprocess.run(["git", "init"], cwd=main,
+                           check=True, capture_output=True)
             subprocess.run(
                 [
                     "git",
@@ -68,7 +72,8 @@ class InitCommandTests(unittest.TestCase):
 
             create_current_layout(worktree)
 
-            self.assertTrue((worktree / ".spoon" / "current" / "brief.md").exists())
+            self.assertTrue(
+                (worktree / ".spoon" / "current" / "brief.md").exists())
             result = subprocess.run(
                 ["git", "rev-parse", "--git-path", "info/exclude"],
                 cwd=worktree,
@@ -84,28 +89,37 @@ class InitCommandTests(unittest.TestCase):
     def test_existing_brief_is_not_overwritten(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "init"], cwd=repo,
+                           check=True, capture_output=True)
             current = repo / ".spoon" / "current"
             current.mkdir(parents=True)
             (current / "brief.md").write_text("custom\n", encoding="utf-8")
             create_current_layout(repo)
-            self.assertEqual((current / "brief.md").read_text(encoding="utf-8"), "custom\n")
+            self.assertEqual(
+                (current / "brief.md").read_text(encoding="utf-8"), "custom\n")
 
     def test_config_json_created_once(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(["git", "init"], cwd=repo,
+                           check=True, capture_output=True)
             create_current_layout(repo)
             config = repo / ".spoon" / "config.json"
             self.assertTrue(config.exists())
             original = config.read_text(encoding="utf-8")
-            config.write_text('{"experimental_cursor_ui": true}\n', encoding="utf-8")
+            config.write_text(
+                '{"experimental_cursor_ui": true}\n', encoding="utf-8")
             create_current_layout(repo)
             self.assertEqual(
                 config.read_text(encoding="utf-8"),
                 '{"experimental_cursor_ui": true}\n',
             )
             self.assertIn('"experimental_cursor_ui": false', original)
+            self.assertIn('"agents"', original)
+            self.assertIn('"claude"', original)
+            self.assertIn('"cli": true', original)
+            self.assertIn('"language": "auto"', original)
+            self.assertIn('"codex"', original)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ import re
 import unittest
 from pathlib import Path
 
-SKILL_ROOT = Path(__file__).resolve().parents[1] / "skills" / "spoon-orchestrator"
+SKILL_ROOT = Path(__file__).resolve().parents[1] / "skills" / "spoon"
 SKILL_MD = SKILL_ROOT / "SKILL.md"
 ACTION_KINDS = SKILL_ROOT / "references" / "action-kinds.md"
 DECISION_GATES = SKILL_ROOT / "references" / "decision-gates.md"
@@ -37,18 +37,57 @@ class OrchestratorSkillContractTests(unittest.TestCase):
         self.assertTrue(ACTION_KINDS.is_file())
         self.assertTrue(DECISION_GATES.is_file())
 
-    def test_skill_frontmatter_names_orchestrator(self) -> None:
+    def test_skill_frontmatter_names_spoon(self) -> None:
         match = FRONTMATTER_RE.match(self.skill)
         self.assertIsNotNone(match)
         assert match is not None
         frontmatter = match.group("body")
-        self.assertIn("name: spoon-orchestrator", frontmatter)
+        self.assertIn("name: spoon", frontmatter)
         self.assertIn("description:", frontmatter)
+        self.assertIn("/spoon", frontmatter)
 
     def test_loop_documents_spoon_run_json(self) -> None:
         self.assertIn("spoon run --repo <repo> --json", self.skill)
         self.assertIn("exit_code", self.skill)
         self.assertIn("pending_decision", self.skill)
+
+    def test_startup_auto_inits_and_requires_config_confirm(self) -> None:
+        self.assertIn("spoon init", self.skill)
+        self.assertIn("spoon config show", self.skill)
+        self.assertIn("spoon config ack", self.skill)
+        self.assertIn("Confirmation:", self.skill)
+        self.assertRegex(
+            self.skill,
+            re.compile(
+                r"Confirmation: needed|needed \(\.\.\.\)",
+                CASELESS,
+            ),
+        )
+        self.assertRegex(
+            self.skill,
+            re.compile(
+                r"Before confirmation.*do \*\*not\*\*|do \*\*not\*\*.*spoon run",
+                CASELESS_DOTALL,
+            ),
+        )
+        self.assertRegex(
+            self.skill,
+            re.compile(
+                r"do \*\*not\*\* repeat the config confirmation",
+                CASELESS,
+            ),
+        )
+        self.assertRegex(
+            self.skill,
+            re.compile(
+                r"Never paste the raw|/spoon.*Goal|distill.*intent|PRD.*title|title.*PRD",
+                CASELESS_DOTALL,
+            ),
+        )
+        self.assertRegex(
+            self.skill,
+            re.compile(r"Goal first line", CASELESS),
+        )
 
     def test_exit_codes_documented(self) -> None:
         for code in ("0", "10", "11", "20", "21"):
@@ -64,7 +103,8 @@ class OrchestratorSkillContractTests(unittest.TestCase):
         )
         self.assertRegex(
             self.skill,
-            re.compile(r"`21`.*Runner failure|Runner failure.*\*\*stop\*\*", CASELESS_DOTALL),
+            re.compile(
+                r"`21`.*Runner failure|Runner failure.*\*\*stop\*\*", CASELESS_DOTALL),
         )
 
     def test_host_action_completion_commands_documented(self) -> None:
@@ -84,7 +124,8 @@ class OrchestratorSkillContractTests(unittest.TestCase):
         )
 
     def test_forbidden_auto_commit(self) -> None:
-        self.assertNotRegex(self.all_text, re.compile(r"git\s+commit", CASELESS))
+        self.assertNotRegex(self.all_text, re.compile(
+            r"git\s+commit", CASELESS))
         self.assertNotRegex(self.all_text, re.compile(r"git\s+push", CASELESS))
         lowered = self.all_text.lower()
         self.assertNotIn("auto-commit", lowered)
@@ -122,8 +163,11 @@ class OrchestratorSkillContractTests(unittest.TestCase):
             ),
         )
 
-    def test_codex_never_auto_creates_threads(self) -> None:
-        self.assertIn("Never auto-create a new Codex thread", self.bundle["action_kinds"])
+    def test_codex_never_auto_creates_threads_when_desktop_disabled(self) -> None:
+        self.assertIn(
+            "Never auto-create a new Codex thread when both `agents.codex.cli` and `agents.codex.desktop` are false",
+            self.bundle["action_kinds"],
+        )
 
     def test_paths_not_full_bodies(self) -> None:
         self.assertRegex(
@@ -150,7 +194,8 @@ class OrchestratorSkillContractTests(unittest.TestCase):
             "--output .spoon/current/implementation-summary.md",
             action_kinds,
         )
-        self.assertGreaterEqual(action_kinds.count("--output <output_path>"), 3)
+        self.assertGreaterEqual(
+            action_kinds.count("--output <output_path>"), 3)
 
     def test_action_kinds_cover_host_kinds(self) -> None:
         text = self.bundle["action_kinds"]

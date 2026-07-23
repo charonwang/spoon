@@ -197,6 +197,36 @@ class BoardCommandTests(unittest.TestCase):
         self.assertTrue(any("plain optional note" in item for item in warnings))
         self.assertFalse(any("plain blocking note | plain optional note" in item for item in warnings))
 
+    def test_no_blockers_sentinel_is_not_parser_warning(self):
+        grouped = classify_review_text(
+            "claude-plan.md",
+            "## Blocking\n"
+            "No blockers, ready for implementation.\n"
+            "## Should Fix\n"
+            "- [SUGGEST] tighten the guard.\n",
+        )
+
+        warnings = [item for item in grouped["Needs Triage"] if "[PARSER WARNING]" in item]
+        self.assertEqual(warnings, [])
+        self.assertTrue(any("tighten the guard." in item for item in grouped["Should Fix"]))
+
+    def test_subheading_findings_are_captured_under_group(self):
+        grouped = classify_review_text(
+            "claude-plan.md",
+            "## Should Fix\n"
+            "### S1: link format\n"
+            "plan.md uses windows paths.\n\n"
+            "## Optional\n"
+            "### N1: add fuzz\n"
+            "follow up later.\n",
+        )
+
+        warnings = [item for item in grouped["Needs Triage"] if "[PARSER WARNING]" in item]
+        self.assertEqual(warnings, [])
+        self.assertTrue(any("S1: link format" in item for item in grouped["Should Fix"]))
+        self.assertTrue(any("windows paths" in item for item in grouped["Should Fix"]))
+        self.assertTrue(any("N1: add fuzz" in item for item in grouped["Optional"]))
+
     def test_changes_requested_with_space_is_not_unparsed_noise(self):
         grouped = classify_review_text(
             "verdict.md",

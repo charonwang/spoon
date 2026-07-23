@@ -19,6 +19,7 @@
 - `git_util.py`'s `run_git()`: argument list, no `shell=True`
 - `snapshot_cmd.py`'s `command_report()`: uses `shell=True` because `--test-cmd` and `--dependency-cmd` are user-provided command strings (trusted input)
 - Everywhere else: argument arrays, no shell string concatenation
+- Windows: bare names like `codex` often resolve to `codex.cmd`; `subprocess` without a shell cannot find them. Use `adapters.command_util.resolve_executable` (via `shutil.which`) before `run`/`Popen`
 
 ## Paths and directories
 

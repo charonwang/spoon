@@ -12,9 +12,9 @@ class DocsContractTests(unittest.TestCase):
         design = (ROOT / "docs" / "design-overview.md").read_text(encoding="utf-8")
         host_actions = (ROOT / "docs" / "host-actions.md").read_text(encoding="utf-8")
         export_policy = (ROOT / "docs" / "export-policy.md").read_text(encoding="utf-8")
-        skill = (ROOT / "skills" / "spoon-orchestrator" / "SKILL.md").read_text(encoding="utf-8")
+        skill = (ROOT / "skills" / "spoon" / "SKILL.md").read_text(encoding="utf-8")
         decision_gates = (
-            ROOT / "skills" / "spoon-orchestrator" / "references" / "decision-gates.md"
+            ROOT / "skills" / "spoon" / "references" / "decision-gates.md"
         ).read_text(encoding="utf-8")
 
         self.assertIn("It does not stage, commit, push, or modify business code.", readme)

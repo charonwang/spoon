@@ -17,7 +17,7 @@ Design contract for the Spoon orchestration layer and file workflow. Companion c
 
 ```text
                     ┌─────────────────────────────────────┐
-                    │  Human / spoon-orchestrator Skill   │
+                    │  Human / spoon Skill   │
                     │  (Codex thread, Cursor UI, manual)  │
                     └──────────────┬──────────────────────┘
                                    │ complete / fail actions
@@ -31,8 +31,8 @@ Design contract for the Spoon orchestration layer and file workflow. Companion c
               ▼                                  ▼                          ▼
      ┌─────────────────┐               ┌─────────────────┐        ┌─────────────────┐
      │ File commands   │               │ Adapters        │        │ .spoon/current/ │
-     │ snapshot        │               │ claude_cli      │        │ brief plan board  │
-     │ prompts board   │               │ manual          │        │ handoff reviews   │
+     │ snapshot        │               │ claude_review   │        │ brief plan board  │
+     │ prompts board   │               │ codex / manual  │        │ handoff reviews   │
      │ handoff archive │               └─────────────────┘        │ snapshots + JSON  │
      └─────────────────┘                                            └─────────────────┘
 ```
@@ -59,7 +59,7 @@ brief
 
 ```text
 .spoon/
-  config.json                    # local only; experimental_cursor_ui (default false)
+  config.json                    # local only; agents.*, language, visible_terminals, terminal
   current/
     brief.md plan.md …           # workflow Markdown and snapshots
     run-state.json               # phase, status, pending_decision
@@ -147,7 +147,7 @@ Gates read **structured sections** of `review-board.md` only (`Blocking`, `Needs
 
 Empty section headers and `_None._` placeholders do not block.
 
-## Skill loop (`spoon-orchestrator`)
+## Skill loop (`spoon`)
 
 The Skill holds **no state**. It only:
 

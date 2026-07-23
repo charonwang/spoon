@@ -11,6 +11,8 @@ def run_git(repo: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
         ["git", *args],
         cwd=repo,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         check=False,
     )

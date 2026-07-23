@@ -17,5 +17,6 @@ dist/
 .ruff_cache/
 
 .spoon/
+.scratch/
 docs/.design/
 .claude/

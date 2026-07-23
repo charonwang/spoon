@@ -1,5 +1,9 @@
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
+
+from spoon.paths import project_paths
 
 
 class ProjectLayoutTests(unittest.TestCase):
@@ -12,6 +16,24 @@ class ProjectLayoutTests(unittest.TestCase):
         self.assertIn('package-dir = {"" = "src"}', pyproject)
         self.assertIn('where = ["src"]', pyproject)
         self.assertIn('include = ["spoon*"]', pyproject)
+
+    def test_project_paths_include_codex_threads(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+            paths = project_paths(repo)
+            self.assertEqual(
+                paths.codex_threads,
+                repo / ".spoon" / "current" / "codex-threads.json",
+            )
+            self.assertEqual(
+                paths.claude_sessions,
+                repo / ".spoon" / "current" / "claude-sessions.json",
+            )
+            self.assertEqual(
+                paths.config_ack,
+                repo / ".spoon" / "config-ack.json",
+            )
 
 
 if __name__ == "__main__":

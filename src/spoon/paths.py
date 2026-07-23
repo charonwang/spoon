@@ -24,7 +24,10 @@ class ProjectPaths:
     events: Path
     implementation: Path
     implementation_base: Path
+    codex_threads: Path
+    claude_sessions: Path
     config: Path
+    config_ack: Path
 
 
 def find_repo_root(start: Path) -> Path:
@@ -60,5 +63,8 @@ def project_paths(repo: Path) -> ProjectPaths:
         events=current / "events.jsonl",
         implementation=current / "implementation.json",
         implementation_base=current / "implementation-base.txt",
+        codex_threads=current / "codex-threads.json",
+        claude_sessions=current / "claude-sessions.json",
         config=spoon / "config.json",
+        config_ack=spoon / "config-ack.json",
     )

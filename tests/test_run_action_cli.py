@@ -5,10 +5,12 @@ from argparse import Namespace
 from pathlib import Path
 from unittest.mock import patch
 
+from spoon.adapters.codex_cli import CodexCliAdapter
 from spoon.commands.action_cmd import run_complete, run_fail, run_list
 from spoon.commands.init_cmd import run as init_run
+from spoon.commands.run_cmd import build_adapters
 from spoon.commands.run_cmd import run as run_cmd
-from spoon.io_util import write_text
+from spoon.io_util import write_json_atomic, write_text
 from spoon.paths import project_paths
 from spoon.runner.actions import action_id, complete_action, enqueue_action, load_actions
 from spoon.runner.model import (
@@ -26,7 +28,8 @@ class RunActionCliTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.repo = Path(self.tmp.name)
-        subprocess.run(["git", "init"], cwd=self.repo, check=True, capture_output=True)
+        subprocess.run(["git", "init"], cwd=self.repo,
+                       check=True, capture_output=True)
         init_run(Namespace(repo=self.repo))
         self.paths = project_paths(self.repo)
 
@@ -38,26 +41,66 @@ class RunActionCliTests(unittest.TestCase):
         prompt = ".spoon/current/prompts/cursor-implement.md"
         output = ".spoon/current/implementation-summary.md"
         return WorkflowAction(
-            id=action_id("run-test", RunPhase.IMPLEMENTATION.value, ActionKind.CURSOR_AGENT_UI.value, prompt, output),
+            id=action_id("run-test", RunPhase.IMPLEMENTATION.value,
+                         ActionKind.CURSOR_AGENT_UI.value, prompt, output),
             kind=ActionKind.CURSOR_AGENT_UI,
             status=ActionStatus.PENDING,
             prompt_path=prompt,
             output_path=output,
             working_directory=str(self.repo),
-            payload={"phase": "implementation", "implementation_base_sha": "base-sha"},
+            payload={"phase": "implementation",
+                     "implementation_base_sha": "base-sha"},
             attempts=0,
             created_at=now,
             updated_at=now,
         )
 
     def test_run_json_output_shape(self):
-        code = run_cmd(Namespace(repo=self.repo, continue_run=False, json=True))
+        code = run_cmd(
+            Namespace(repo=self.repo, continue_run=False, json=True))
         self.assertEqual(code, 0)
         # second call should still emit json keys through advance
 
+    def test_build_adapters_uses_codex_cli_when_enabled(self):
+        write_json_atomic(
+            self.paths.config,
+            {
+                "visible_terminals": True,
+                "agents": {
+                    "codex": {
+                        "cli": True,
+                        "desktop": True,
+                        "model": "gpt-5.6-sol",
+                        "reasoning_effort": "high",
+                        "service_tier": "fast",
+                    },
+                },
+            },
+        )
+
+        adapters = build_adapters(
+            self.repo, title="Spoon:test", run_id="run-001")
+
+        adapter = adapters["codex_thread_message"]
+        self.assertIsInstance(adapter, CodexCliAdapter)
+        self.assertTrue(adapter.visible)
+        self.assertEqual(adapter.model, "gpt-5.6-sol")
+        self.assertEqual(adapter.reasoning_effort, "high")
+        self.assertEqual(adapter.service_tier, "fast")
+
+    def test_build_adapters_omits_claude_when_disabled(self):
+        write_json_atomic(
+            self.paths.config,
+            {"agents": {"claude": {"cli": False}}},
+        )
+        adapters = build_adapters(
+            self.repo, title="Spoon:test", run_id="run-001")
+        self.assertNotIn("claude_review", adapters)
+
     def test_continue_requires_existing_state(self):
         self.paths.run_state.unlink(missing_ok=True)
-        code = run_cmd(Namespace(repo=self.repo, continue_run=True, json=False))
+        code = run_cmd(
+            Namespace(repo=self.repo, continue_run=True, json=False))
         self.assertEqual(code, 2)
 
     def test_action_complete_rejects_path_traversal(self):
@@ -95,7 +138,8 @@ class RunActionCliTests(unittest.TestCase):
         prompt = ".spoon/current/prompts/claude-plan-review.md"
         output = ".spoon/current/reviews/claude-plan.md"
         action = WorkflowAction(
-            id=action_id("run-test", RunPhase.PLAN_REVIEW.value, ActionKind.CLAUDE_REVIEW.value, prompt, output),
+            id=action_id("run-test", RunPhase.PLAN_REVIEW.value,
+                         ActionKind.CLAUDE_REVIEW.value, prompt, output),
             kind=ActionKind.CLAUDE_REVIEW,
             status=ActionStatus.PENDING,
             prompt_path=prompt,
@@ -110,7 +154,8 @@ class RunActionCliTests(unittest.TestCase):
         review_output = self.paths.reviews / "claude-plan.md"
         write_text(review_output, "review\n")
         code = run_complete(
-            Namespace(repo=self.repo, action_id=action.id, output=review_output)
+            Namespace(repo=self.repo, action_id=action.id,
+                      output=review_output)
         )
         self.assertEqual(code, 0)
         self.assertIsNone(load_implementation(self.paths))
@@ -146,7 +191,8 @@ class RunActionCliTests(unittest.TestCase):
         )
         with patch("spoon.runner.state_store.save_implementation", side_effect=RuntimeError("boom")):
             with self.assertRaises(RuntimeError):
-                complete_action(self.paths, action.id, output, implementation_record=record)
+                complete_action(self.paths, action.id, output,
+                                implementation_record=record)
         stored = load_actions(self.paths)[0]
         self.assertEqual(stored.status, ActionStatus.PENDING)
         self.assertIsNone(load_implementation(self.paths))

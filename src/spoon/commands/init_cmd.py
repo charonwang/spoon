@@ -8,12 +8,19 @@ from ..constants import PROMPT_FILES, REVIEW_FILES, SNAPSHOT_FILES
 from ..git_util import run_git
 from ..io_util import append_unique_line, write_json_atomic, write_text
 from ..paths import find_repo_root, project_paths
-from ..templates import blank_template, brief_template, metadata_template, review_board_template
+from ..templates import (
+    blank_template,
+    brief_template,
+    metadata_template,
+    review_board_template,
+)
 
 
 def register(subparsers):
-    parser = subparsers.add_parser("init", help="Create .spoon/current structure.")
-    parser.add_argument("--repo", type=Path, default=Path.cwd(), help="Repository path.")
+    parser = subparsers.add_parser(
+        "init", help="Create .spoon/current structure.")
+    parser.add_argument("--repo", type=Path,
+                        default=Path.cwd(), help="Repository path.")
     parser.set_defaults(handler=run)
 
 
@@ -44,7 +51,8 @@ def create_current_layout(repo: Path) -> None:
     write_if_missing(paths.plan, blank_template())
     write_if_missing(paths.review_board, review_board_template())
     write_if_missing(paths.handoff, blank_template())
-    write_if_missing(paths.metadata, metadata_template(paths.repo, datetime.now()))
+    write_if_missing(paths.metadata, metadata_template(
+        paths.repo, datetime.now()))
 
     for name in PROMPT_FILES:
         write_if_missing(paths.prompts / name, blank_template())
@@ -54,7 +62,34 @@ def create_current_layout(repo: Path) -> None:
         write_if_missing(paths.snapshots / name, blank_template())
 
     if not paths.config.exists():
-        write_json_atomic(paths.config, {"experimental_cursor_ui": False})
+        write_json_atomic(
+            paths.config,
+            {
+                "experimental_cursor_ui": False,
+                "visible_terminals": False,
+                "language": "auto",
+                "terminal": {
+                    "launcher": "windows_terminal",
+                    "executable": None,
+                    "args": None,
+                },
+                "agents": {
+                    "claude": {
+                        "cli": True,
+                        "model": None,
+                        "ui": "interactive",
+                    },
+                    "codex": {
+                        "cli": False,
+                        "desktop": False,
+                        "model": None,
+                        "reasoning_effort": None,
+                        "service_tier": None,
+                        "project_map": {},
+                    },
+                },
+            },
+        )
 
     ensure_git_exclude(paths.repo)
 
@@ -63,4 +98,5 @@ def run(args: Namespace) -> int:
     repo = find_repo_root(args.repo)
     create_current_layout(repo)
     print(f"Initialized {project_paths(repo).current}")
+    print("Config: edit .spoon/config.json — spoon config show / spoon config keys")
     return 0

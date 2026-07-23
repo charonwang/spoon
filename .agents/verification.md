@@ -14,6 +14,22 @@ uv venv --python ">=3.11"
 uv pip install -e ".[dev]"
 ```
 
+User-level `/spoon` Skill (Cursor + Claude Code), once per machine:
+
+```powershell
+spoon skills install
+# or after a previous copy/symlink:
+spoon skills install --force
+spoon skills status
+```
+
+This symlinks `skills/spoon` into `~/.agents/skills/spoon` and `~/.claude/skills/spoon`.
+Edits under this repo apply immediately; do not copy the Skill into project `.cursor/skills/`.
+
+`/spoon` startup: auto `spoon init` if layout missing, then `spoon config show`. Confirm only
+when the `Confirmation:` line says `needed` (first time / after `config.json` changes);
+otherwise proceed. After the user confirms, run `spoon config ack`.
+
 If pip is missing (Python 3.12+), bootstrap it first:
 ```powershell
 python -m ensurepip --upgrade

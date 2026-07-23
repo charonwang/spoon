@@ -2,7 +2,7 @@
 
 Spoon is a **local file workflow CLI**. It maintains Markdown and snapshot files under `.spoon/current/` in your business repository. It does **not** modify application code or create Git commits.
 
-You, Cursor, Codex, and Claude Code read the same files. For automated phase advancement, use `spoon run` and the `spoon-orchestrator` Skill (see [architecture](architecture.md) and [host actions](host-actions.md)).
+You, Cursor, Codex, and Claude Code read the same files. For automated phase advancement, use `spoon run` and the `spoon` Skill (see [architecture](architecture.md) and [host actions](host-actions.md)).
 
 Generated implementation prompts may allow your coding agent to create a local checkpoint commit
 after a completed approved item or review-fix batch passes relevant verification. Spoon and its host
@@ -216,7 +216,7 @@ spoon archive --archive-root "D:\Charon\Project\archives" --project my-project -
 
 ### 10. Runner loop (optional)
 
-`spoon run` advances at most one phase per call; loop on it (or let the `spoon-orchestrator` Skill loop) to walk the workflow. Without `--continue`, a missing `run-state.json` starts a fresh run. With `--continue`, the Runner requires an existing `run-state.json` and errors out instead of starting over — use it once a run is underway:
+`spoon run` advances at most one phase per call; loop on it (or let the `spoon` Skill loop) to walk the workflow. Without `--continue`, a missing `run-state.json` starts a fresh run. With `--continue`, the Runner requires an existing `run-state.json` and errors out instead of starting over — use it once a run is underway:
 
 ```powershell
 spoon run --repo . --json
@@ -266,6 +266,7 @@ coding-agent local checkpoint commits, but Spoon itself still does not perform G
 
 ## Related Docs
 
+- [Positioning](positioning.md) — governance layer vs multi-agent orchestrators
 - [Design overview](design-overview.md)
 - [Architecture](architecture.md) — Runner, gates, adapters, exit codes
 - [Host actions](host-actions.md) — Codex, Cursor, Claude, manual contracts

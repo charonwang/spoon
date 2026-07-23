@@ -2,11 +2,13 @@
 
 [![CI](https://github.com/charonwang/spoon/actions/workflows/ci.yml/badge.svg)](https://github.com/charonwang/spoon/actions/workflows/ci.yml)
 
-Spoon is a local Python CLI for coordinating planning, review, implementation handoff, and final checks across Cursor, Codex, and Claude Code.
+Spoon is a local Python CLI that acts as the **governance layer** for multi-tool coding:
+shared plan / review / handoff files, human decision gates, and resumable phases across
+Cursor, Codex, and Claude Code. It is not a parallel agent farm.
 
 It uses plain files as the shared source of truth. The tool creates and updates `.spoon/current/` in your target repository, then your editors and AI agents can read the same `brief.md`, `plan.md`, `review-board.md`, `handoff.md`, and snapshot files.
 
-A resumable Runner (`spoon run`) can advance workflow phases; the `spoon-orchestrator` Skill executes host actions Codex and Cursor cannot run inside Python.
+A resumable Runner (`spoon run`) can advance workflow phases; the `spoon` Skill executes host actions Codex and Cursor cannot run inside Python.
 
 Spoon is intentionally local-first and conservative:
 
@@ -80,6 +82,7 @@ More variants (py launcher, uv, PATH issues): see the [usage guide](docs/usage.m
 ## Documentation
 
 - [Usage guide](docs/usage.md) — install, workflow, and command reference
+- [Positioning](docs/positioning.md) — governance layer vs multi-agent orchestrators
 - [Design overview](docs/design-overview.md)
 - [Architecture](docs/architecture.md) — Runner, gates, adapters, Skill loop
 - [Roadmap](docs/roadmap.md) — release history and future work
@@ -99,7 +102,22 @@ More variants (py launcher, uv, PATH issues): see the [usage guide](docs/usage.m
 | `spoon archive` | Archive task (`--archive-root`, `--project`, `--task`) |
 | `spoon run [--continue] [--json]` | Advance workflow one phase |
 | `spoon action list`, `complete`, `fail` | Host action queue |
+| `spoon config show` | Current `.spoon/config.json` + tool/terminal probes |
+| `spoon config keys` | Config key reference (defaults and allowed values) |
 | `spoon export-github` | Redacted export candidate for GitHub history |
+
+## Configuration
+
+Per-repo settings live in `.spoon/config.json` (created by `spoon init`, not committed by default).
+
+```powershell
+spoon config keys    # what you can set
+spoon config show    # what this repo uses + Claude/Codex/terminal status
+```
+
+Common knobs: `agents.claude.*`, `agents.codex.*`, `visible_terminals`, and `terminal.launcher`
+(`windows_terminal`, `conhost`, `tabby`, `custom`, `inline`). Deeper contracts:
+[host actions](docs/host-actions.md) and [design overview](docs/design-overview.md).
 
 ## Quick Start
 

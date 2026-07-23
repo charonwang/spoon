@@ -73,12 +73,29 @@ def classify_review_text(source: str, text: str) -> dict[str, list[str]]:
         line = raw_line.strip()
         if not line:
             continue
-        heading = heading_label(raw_line)
-        if heading is not None:
+        heading_match = HEADING_RE.match(raw_line)
+        if heading_match is not None:
+            heading_text = heading_match.group(2).strip()
+            heading_key = heading_text.rstrip(":").casefold()
+            if heading_key in HEADING_GROUPS or heading_key in {"verdict", "summary"}:
+                flush()
+                flush_unparsed()
+                current = HEADING_GROUPS.get(heading_key)
+                ignore_prose = heading_key in {"verdict", "summary"}
+                continue
+            # An unknown heading such as "### S1: ..." inside an active group is a
+            # finding sub-heading: start a finding block from it and let the
+            # following prose append, instead of resetting the group context.
+            if current is not None and not ignore_prose:
+                flush()
+                block = [heading_text]
+                continue
+            # Otherwise treat it as a generic section boundary (matches the
+            # original behavior for headings like "## Findings").
             flush()
             flush_unparsed()
-            current = HEADING_GROUPS.get(heading)
-            ignore_prose = heading in {"verdict", "summary"}
+            current = None
+            ignore_prose = False
             continue
         if raw_line.lstrip().startswith("- "):
             if ignore_prose:
@@ -86,13 +103,14 @@ def classify_review_text(source: str, text: str) -> dict[str, list[str]]:
             flush()
             block = [raw_line.lstrip()[2:].strip()]
             continue
-        if block and raw_line[:1].isspace():
+        if block:
             block.append(line)
             continue
-        if not ignore_prose and line.casefold() not in {
+        if not ignore_prose and line.casefold().rstrip(" .") not in {
             "pass",
             "changes_requested",
             "changes requested",
+            "no blockers, ready for implementation",
         }:
             unparsed.append(line)
 

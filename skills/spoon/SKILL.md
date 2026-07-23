@@ -1,15 +1,70 @@
 ---
-name: spoon-orchestrator
+name: spoon
 description: >-
-  Loop on `spoon run --json` to execute Spoon Runner host actions and pause for
-  human decisions. Use when advancing a Spoon workflow, when exit code is 11 or
-  20, or when the user asks to run the Spoon orchestrator.
+  Start or advance a Spoon workflow from `/spoon <intent>`: write brief/plan,
+  loop on `spoon run --json`, execute host actions, and pause for human
+  decisions (exit 10/11/20). Use when the user invokes /spoon, asks to run the
+  Spoon orchestrator, or Runner needs a host loop.
 ---
 
-# Spoon Orchestrator
+# Spoon
 
 Portable host loop for Spoon Runner workflows. The Runner owns all workflow state; this Skill
 holds **no state** and never edits `.spoon/` JSON files directly.
+
+Install once with `spoon skills install` (symlinks into `~/.agents/skills/spoon` and
+`~/.claude/skills/spoon`). Do not copy this Skill into each project's `.cursor/skills/`.
+
+When `visible_terminals` is true and `agents.claude.ui` is `interactive` (default),
+Claude review opens the Claude Code TUI in an external terminal (`terminal.launcher`).
+One Claude session is kept per Spoon run (`--session-id` then `--resume`): the window may
+close between turns; the next review reopens the same session. Spoon waits for the review
+file. Set `agents.claude.ui` to `print` for the legacy `-p` JSON/stream-json path.
+`inline` launcher streams into the Spoon process; Spoon cannot open Cursor's Terminal
+panel. Codex Desktop remains separate (`agents.codex.desktop`).
+
+**Cursor is the visible orchestrator.** Run this loop inside Cursor agent chat. Cursor chat
+is the visible session for plan adoption, implementation, and narration — no separate Cursor
+window is required. Before and after each `spoon run` step, and whenever Claude or Codex
+starts or finishes, narrate in chat: which reviewer ran, the target directory, and the
+result or fallback path. On exit `20`, quote the adapter/`spoon` stderr message verbatim —
+do **not** invent “Desktop unavailable” unless that text appears. Prefer retrying
+`spoon run` once before hand-writing a review.
+
+When the user starts via `/spoon <intent>`, treat the current workspace as the repo and
+begin the loop immediately. Do not search the filesystem for Spoon installs, skills, or
+`import spoon`; use the `spoon` CLI on PATH. Match the intent language for chat replies,
+brief/plan prose, and narration (do not translate the intent into English; do not switch
+to English only because this Skill text is English).
+
+Startup from intent:
+
+1. If `.spoon/current/brief.md` is missing, run `spoon init` and narrate one short line
+   that the layout was initialized. Do not ask for permission to init.
+2. Run `spoon config show`. Read the `Confirmation:` line at the end:
+   - `Confirmation: needed (...)` → present Config + Environment + Notes, **stop and wait**
+     for the user to confirm (or edit `.spoon/config.json` and re-show). Before confirmation,
+     do **not** write brief/plan, and do **not** run `spoon prompts`, `spoon snapshot`, or
+     `spoon run`. After the user confirms, run `spoon config ack`, then continue.
+   - `Confirmation: ok (...)` → do **not** wait; proceed immediately (config unchanged since
+     last ack). Still show the report briefly if useful, but do not block.
+3. Write `.spoon/current/brief.md` in the intent language. **Goal first line** becomes the
+   conversation title (`Spoon:<label>`). Choose it as follows:
+   - If the user pointed at a PRD/doc that already has a title (document title, H1, or an
+     explicit Title/Name field), use that short title as Goal.
+   - Otherwise distill a short product/topic name from the intent.
+   - Never paste the raw `/spoon` message into Goal. Put the full intent or PRD detail under
+     Constraints / Current Guess (or adopt the plan file as usual).
+   Then write a short `.spoon/current/plan.md` in that same language.
+4. `spoon prompts` then `spoon snapshot` then loop `spoon run --json` (cwd = this repo).
+5. Exit 10 → show `pending_decision`, wait. Exit 0 → brief status, stop unless user continues.
+   Never edit Decisions.
+6. Only mention Codex Desktop / Claude again if an adapter actually fails after confirmation;
+   quote the failure message; one short tip, then stop or retry.
+
+When resuming an in-progress run (exit 10/11/20 host loop, no new `/spoon <intent>` startup),
+do **not** repeat the config confirmation gate (even if `Confirmation: needed` — mid-run
+resume skips ack; only new `/spoon <intent>` startups honor the digest gate).
 
 ## Hard rules
 

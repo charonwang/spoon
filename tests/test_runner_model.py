@@ -9,6 +9,7 @@ from spoon.runner.model import (
     RunState,
     RunStatus,
     WorkflowAction,
+    touch_state,
     utc_now_iso,
 )
 
@@ -33,8 +34,14 @@ class RunnerModelTests(unittest.TestCase):
         self.assertEqual(state.run_id, "run-001")
         self.assertEqual(state.phase, RunPhase.BRIEF)
         self.assertEqual(state.status, RunStatus.READY)
+        self.assertIsNone(state.task_label)
         restored = RunState.from_dict(state.to_dict())
         self.assertEqual(restored, state)
+
+    def test_run_state_task_label_round_trip(self):
+        state = touch_state(RunState.new("run-001"), task_label="ST冒烟")
+        restored = RunState.from_dict(state.to_dict())
+        self.assertEqual(restored.task_label, "ST冒烟")
 
     def test_workflow_action_round_trip(self):
         action = WorkflowAction(
@@ -62,7 +69,8 @@ class RunnerModelTests(unittest.TestCase):
             base_sha="base-sha",
         )
         self.assertEqual(record.to_dict()["status"], "reported_complete")
-        self.assertEqual(ImplementationRecord.from_dict(record.to_dict()), record)
+        self.assertEqual(ImplementationRecord.from_dict(
+            record.to_dict()), record)
 
 
 if __name__ == "__main__":

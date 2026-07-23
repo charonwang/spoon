@@ -1,6 +1,8 @@
 # Spoon Roadmap
 
-This document is the public timeline: what shipped and what may come next. Day-to-day usage lives in [usage.md](usage.md) and [design-overview.md](design-overview.md).
+This document is the public timeline: what shipped and what may come next. Day-to-day
+usage lives in [usage.md](usage.md) and [design-overview.md](design-overview.md). Product
+position (governance layer, not parallel agent farm): [positioning.md](positioning.md).
 
 ## Shipped (`v0.2.0`)
 
@@ -21,6 +23,24 @@ Architecture: [architecture.md](architecture.md). Host contracts: [host-actions.
 ### Runner exit codes
 
 `0` stable, `10` user decision, `11` pending host action, `20` adapter unavailable → manual action, `21` runner failure. Full table: [architecture.md](architecture.md).
+
+---
+
+## Direction
+
+Stay the verification / governance layer in a Cursor → Claude/Codex → review stack.
+Adapters matter when they improve review intake, digests, and gates — not when they turn
+Spoon into a coding orchestrator. Full rationale: [positioning.md](positioning.md).
+
+Priority order for upcoming work:
+
+1. **Sharper defaults** — document executor ≠ reviewer pairings; reduce friction from
+   `adopt-plan` to the first human gate without adding a second state store.
+2. **V3 observability** — explicit phase graph, `spoon graph` / `--trace`, unified pause
+   records (below).
+3. **Thin host integration** — Codex/Claude adapters that land reviews on the board;
+   optional worktree-aware snapshot / implementation-base later.
+4. **MCP facade (conditional)** — only after real workflows prove multi-client need.
 
 ---
 
@@ -51,7 +71,7 @@ framework's model/tool/memory machinery does not apply. Concretely:
 
 Deep Agents is a useful comparison, but not a target architecture. Its `interrupt_on`,
 subagents, filesystem-backed context, memory files, and skills map loosely to Spoon's gates,
-host actions, `.spoon/current/`, `AGENTS.md`, and `spoon-orchestrator` Skill. The useful lesson
+host actions, `.spoon/current/`, `AGENTS.md`, and `spoon` Skill. The useful lesson
 for V3 is the pause and delegation rules: declare when a run pauses, record what input is needed to
 continue, keep delegated work isolated, and require a readable output artifact. Spoon should keep
 those contracts in files and exit codes instead of moving model/tool execution into the CLI.
@@ -106,10 +126,13 @@ All calls must go through existing Runner modules — no second state store.
 - `--dangerously-skip-permissions`, `--yolo`, or equivalent on external tools
 - Cursor UI automation by default (`experimental_cursor_ui` opt-in only)
 - Uploading raw `.spoon/current/`, patches, logs, or transcripts to GitHub
+- Parallel agent farms, worktree spawners, or coding dashboards (use Tier 2/3 tools)
+- Competing with Conductor, Agent Teams, or cloud coding agents on throughput
 
 ---
 
 ## How to follow progress
 
-1. Read [architecture.md](architecture.md) for design contracts.
-2. Use GitHub [Issues](https://github.com/charonwang/spoon/issues) for actionable work.
+1. Read [positioning.md](positioning.md) for product boundaries.
+2. Read [architecture.md](architecture.md) for design contracts.
+3. Use GitHub [Issues](https://github.com/charonwang/spoon/issues) for actionable work.

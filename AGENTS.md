@@ -1,15 +1,18 @@
 # Spoon — Agent Entry
 
-Python 3.11+ CLI for coordinating Cursor, Codex, and Claude Code across plan → review → handoff → archive workflows. File-based shared truth under `.spoon/current/`. Includes a resumable state-machine Runner.
+Python 3.11+ CLI: local governance layer for Cursor, Codex, and Claude Code across
+plan → review → handoff → archive. File-based shared truth under `.spoon/current/`.
+Resumable state-machine Runner. Not a parallel agent farm — see `docs/positioning.md`.
 
 ## Architecture
 
 ```text
-Developer / spoon-orchestrator Skill
+Developer / spoon Skill (`/spoon`)
   │  spoon run / spoon action
   ▼
 CLI (argparse) ──┬── File commands (init/adopt-plan/snapshot/prompts/board/handoff/archive/export-github)
                   │
+                  ├── skills install (symlink → ~/.agents/skills + ~/.claude/skills)
                   └── Runner engine (spoon run)
                         │  run-state.json / actions.json / events.jsonl
                         ▼
@@ -24,6 +27,7 @@ CLI (argparse) ──┬── File commands (init/adopt-plan/snapshot/prompts/b
 - Decision gates only read `review-board.md` structured sections (Blocking / Needs Triage / …), never touching human Decisions
 - Runner exit codes: 0 stable / 10 needs_user / 11 needs_host / 20 manual fallback / 21 failure
 - All JSON writes: temp file → `Path.replace()` atomic swap
+- User Skill: source `skills/spoon/`; install with `spoon skills install` (do not copy into project `.cursor/skills/`)
 - New command checklist: ① write module in `src/spoon/commands/` ② implement `register(subparsers)` ③ register in `__init__.py`'s `COMMAND_MODULES` ④ add tests
 - `io_util.py` is the only file I/O entry point; don't use `open()` or `json.dump()` directly
 - JSON writes must be atomic (`write_json_atomic`); corrupt state files must error rather than silently swallow
@@ -46,4 +50,6 @@ CLI (argparse) ──┬── File commands (init/adopt-plan/snapshot/prompts/b
 | `src/spoon/io_util.py` | All I/O (LF newlines, atomic JSON, marker replacement) |
 | `src/spoon/review_parser.py` | Review Markdown → structured grouping |
 | `src/spoon/adapters/base.py` | Adapter Protocol |
-| `skills/spoon-orchestrator/SKILL.md` | Stateless host action loop contract |
+| `skills/spoon/SKILL.md` | Stateless host action loop (`/spoon`) |
+| `src/spoon/config_report.py` | `spoon config show` text + Claude/Codex probes |
+| `src/spoon/layout.py` | `layout_ready` / missing-layout hint |

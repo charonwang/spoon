@@ -2,7 +2,7 @@
 
 Runner actions describe work that Python cannot complete alone. The Runner owns the queue; hosts execute actions and report completion through `spoon action complete` or `spoon action fail`.
 
-This document is the contract for `spoon-orchestrator` and human fallback when using `spoon run`.
+This document is the contract for the `spoon` Skill and human fallback when using `spoon run`.
 
 ## Rules
 
@@ -35,17 +35,37 @@ Every `WorkflowAction` stores stable fields:
 
 ### `claude_review`
 
-Executed by `ClaudeCliAdapter` inside Python.
+When `.spoon/config.json` has `"agents": { "claude": { "cli": true } }`
+(default), executed by `ClaudeCliAdapter` inside Python.
 
-- Use `subprocess.run([...], shell=False)`.
+- Use `subprocess.run([...], shell=False)` (or visible stream / external
+  terminal when `visible_terminals` is true).
+- With `visible_terminals: true`, Claude may open in `terminal.launcher`
+  (`windows_terminal`, `conhost`, `tabby`, `custom`, or `inline`). Spoon still
+  captures stream-json for the review file. `inline` tees into the spoon process;
+  Cursor's Terminal panel cannot be opened from the CLI.
 - Do not pass permission-skipping flags.
 - Verify target-machine support with `claude --help`.
 - Render review Markdown with `## Verdict`, `## Summary`, and `## Findings`.
 - Generated review must not create `[PARSER WARNING]` when passed to `classify_review_text()`.
 
+When `"agents.claude.cli": false`, there is no Claude adapter: the Runner enqueues a
+`manual` fallback (exit `20`) so a host can run Claude in a visible terminal and
+complete the declared `output_path`.
+
 ### `codex_thread_message`
 
-Executed by the host Skill when thread tools are available.
+When `.spoon/config.json` has `agents.codex.cli` or `agents.codex.desktop` true,
+executed inside `spoon run` by the matching adapter. Otherwise executed by the
+host Skill when Codex thread tools are available.
+
+`agents.codex.desktop` notes (Windows): Codex `app-server daemon` / `proxy` are
+Unix-oriented. Spoon uses `codex app-server --stdio`, writes sessions under
+`~/.codex/sessions`, and best-effort launches `codex app` so Desktop can show
+the `spoon:<action_id>:...` thread. If app-server fails, the adapter may fall
+back to `codex exec` (no Desktop thread).
+
+Host Skill path (both Codex surfaces false):
 
 - Use only an explicit thread id or a unique existing thread match.
 - Do not create a new thread automatically.

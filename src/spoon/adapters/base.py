@@ -22,6 +22,7 @@ class AdapterRequest:
     output_path: str
     working_directory: str
     timeout_seconds: int = 300
+    phase: str | None = None
 
 
 @dataclass(frozen=True)

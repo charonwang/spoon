@@ -32,10 +32,13 @@ def command_report(label: str, command: str | None, repo: Path) -> str:
     if not command:
         return f"# {label}\n\nNo command configured.\n"
 
+    print(f"  Running {label.lower()}: {command}", flush=True)
     result = subprocess.run(
         command,
         cwd=repo,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         shell=True,
         check=False,
@@ -47,6 +50,10 @@ def command_report(label: str, command: str | None, repo: Path) -> str:
         f"## stdout\n\n{result.stdout}\n"
         f"## stderr\n\n{result.stderr}\n"
     )
+
+
+def report_step(message: str) -> None:
+    print(f"  {message}", flush=True)
 
 
 def git_text(repo: Path, args: list[str]) -> str:
@@ -208,6 +215,7 @@ def snapshot_file(paths, name: str) -> Path:
 def create_snapshot(repo: Path, test_cmd: str | None, dependency_cmd: str | None) -> None:
     paths = project_paths(repo)
     paths.snapshots.mkdir(parents=True, exist_ok=True)
+    report_step("Collecting git status and diffs...")
     untracked_paths, untracked_error = git_untracked_paths_or_error(repo)
     base_sha, base_warning = implementation_base_sha(paths)
     committed_stat_sections, committed_diff_sections = committed_since_base_sections(
@@ -252,6 +260,7 @@ def create_snapshot(repo: Path, test_cmd: str | None, dependency_cmd: str | None
     )
     write_default_sensitive_scan(snapshot_file(paths, "sensitive-scan.txt"))
     update_metadata_snapshot_time(paths.metadata, repo)
+    report_step("Done.")
 
 
 def run(args: Namespace) -> int:

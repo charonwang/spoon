@@ -57,6 +57,7 @@ class RunState:
     pending_decision: str | None
     last_error: str | None
     updated_at: str
+    task_label: str | None = None
 
     @classmethod
     def new(cls, run_id: str) -> RunState:
@@ -69,6 +70,7 @@ class RunState:
             pending_decision=None,
             last_error=None,
             updated_at=now,
+            task_label=None,
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -80,6 +82,7 @@ class RunState:
             "pending_decision": self.pending_decision,
             "last_error": self.last_error,
             "updated_at": self.updated_at,
+            "task_label": self.task_label,
         }
 
     @classmethod
@@ -87,16 +90,20 @@ class RunState:
         for key in ("schema_version", "run_id", "phase", "status", "updated_at"):
             if key not in value:
                 raise ValueError(f"missing {key}")
+        task_label = value.get("task_label")
         return cls(
             schema_version=int(value["schema_version"]),
             run_id=str(value["run_id"]),
             phase=RunPhase(str(value["phase"])),
             status=RunStatus(str(value["status"])),
             pending_decision=(
-                None if value.get("pending_decision") is None else str(value["pending_decision"])
+                None if value.get("pending_decision") is None else str(
+                    value["pending_decision"])
             ),
-            last_error=None if value.get("last_error") is None else str(value["last_error"]),
+            last_error=None if value.get(
+                "last_error") is None else str(value["last_error"]),
             updated_at=str(value["updated_at"]),
+            task_label=None if task_label is None else str(task_label),
         )
 
 
@@ -137,10 +144,12 @@ class WorkflowAction:
             kind=ActionKind(str(value["kind"])),
             status=ActionStatus(str(value["status"])),
             prompt_path=(
-                None if value.get("prompt_path") is None else str(value["prompt_path"])
+                None if value.get("prompt_path") is None else str(
+                    value["prompt_path"])
             ),
             output_path=(
-                None if value.get("output_path") is None else str(value["output_path"])
+                None if value.get("output_path") is None else str(
+                    value["output_path"])
             ),
             working_directory=str(value["working_directory"]),
             payload=dict(value.get("payload") or {}),
@@ -183,7 +192,8 @@ class ImplementationRecord:
             action_id=str(value["action_id"]),
             completed_at=str(value["completed_at"]),
             summary_path=str(value["summary_path"]),
-            base_sha=None if value.get("base_sha") is None else str(value["base_sha"]),
+            base_sha=None if value.get(
+                "base_sha") is None else str(value["base_sha"]),
         )
 
 

@@ -180,6 +180,27 @@ class RunnerEngineTests(unittest.TestCase):
         self.assertFalse(self.paths.implementation_base.exists())
         self.assertEqual(actions[0].payload["implementation_base_sha"], current_head_or_empty(self.repo))
 
+    def test_codex_adapter_runs_in_process_when_registered(self):
+        self._reach_plan_review()
+
+        class FakeCodexAdapter:
+            def execute(self, request):
+                output = Path(request.working_directory) / request.output_path
+                write_text(
+                    output,
+                    "## Verdict\n\napproved\n\n## Summary\n\nok\n\n"
+                    "## Findings\n\n### Optional\n\n- _None._\n",
+                )
+                return AdapterResult(status=AdapterStatus.SUCCESS, message="ok")
+
+        adapters = {
+            **self.adapters,
+            "codex_thread_message": FakeCodexAdapter(),
+        }
+        result = advance(self.repo, adapters)
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue((self.paths.reviews / "codex-plan.md").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()

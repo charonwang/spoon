@@ -252,11 +252,14 @@ def process_adapter_action(
     adapters: Mapping[str, Adapter],
 ) -> tuple[int | None, list[WorkflowAction], str | None]:
     manual = _MANUAL_ADAPTER
+    phase_value = action.payload.get("phase")
+    phase = phase_value if isinstance(phase_value, str) else None
     request = AdapterRequest(
         prompt_path=action.prompt_path or "",
         output_path=action.output_path or "",
         working_directory=action.working_directory,
         action_id=action.id,
+        phase=phase,
     )
     adapter = adapter_for(action.kind, adapters)
     if adapter is None:
@@ -287,6 +290,16 @@ def process_adapter_action(
     if result.status == AdapterStatus.NEEDS_USER:
         return 10, [], result.message
     if result.status in {AdapterStatus.UNAVAILABLE, AdapterStatus.FAILED}:
+        append_event(
+            paths,
+            "adapter_fallback_manual",
+            {
+                "action_id": action.id,
+                "kind": action.kind.value,
+                "adapter_status": result.status.value,
+                "message": result.message,
+            },
+        )
         manual_result = manual.execute(request)
         if manual_result.action is not None:
             fallback = WorkflowAction(
@@ -336,10 +349,18 @@ def handle_review_phase(
                 pending_decision = decision
             if code == 20 or code == 10:
                 break
-        elif action.kind in {
-            ActionKind.CODEX_THREAD_MESSAGE,
-            ActionKind.MANUAL,
-        }:
+        elif action.kind == ActionKind.CODEX_THREAD_MESSAGE:
+            if adapter_for(action.kind, adapters) is not None:
+                code, items, decision = process_adapter_action(paths, action, adapters)
+                exit_override = _prefer_exit(exit_override, code)
+                if decision:
+                    pending_decision = decision
+                if code == 20 or code == 10:
+                    break
+            elif exit_override != 20:
+                enqueue_action(paths, action)
+                exit_override = _prefer_exit(exit_override, 11)
+        elif action.kind == ActionKind.MANUAL:
             if exit_override == 20:
                 continue
             enqueue_action(paths, action)
